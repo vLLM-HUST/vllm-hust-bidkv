@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - feature/bidkv
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    name: CPU unit tests / Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run CPU-safe tests
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pytest tests -q
+  ascend-self-hosted:
+    name: Ascend self-hosted integration
+    runs-on:
+      - self-hosted
+      - linux
+      - ascend
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show runner environment
+        run: |
+          set -eux
+          uname -a
+          python --version
+          which python
+          npu-smi info || true
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Require vLLM and run integration-aware tests
+        env:
+          PYTHONPATH: src
+          BIDKV_REQUIRE_VLLM: "1"
+        run: |
+          python - <<'PY'
+          import importlib.util
+          import sys
+
+          required = ["vllm"]
+          missing = [name for name in required if importlib.util.find_spec(name) is None]
+          if missing:
+              raise SystemExit(f"Missing required runtime packages on Ascend runner: {missing}")
+
+          print("vLLM is importable on Ascend runner")
+          try:
+              import torch
+              print(f"torch: {getattr(torch, '__version__', 'unknown')}")
+          except Exception as exc:
+              print(f"torch import failed: {exc}", file=sys.stderr)
+          PY
+          python -m pytest tests -q

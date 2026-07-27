@@ -4,6 +4,8 @@
 
 [English](README.md)
 
+BidKV 是 SC 2026 论文 **《BidKV: Utility-Guided Preemption Scheduling for KV-Pressure LLM Serving》** 的代码仓库，作者为 Yanbo Chen、Mingqi Wang、Shuhao Zhang、Xiaofei Liao 和 Hai Jin。
+
 ## 概述
 
 `bidkv` 是一个**零外部依赖**的独立 Python 包，解决 KV cache 压力下的**受害者选择**问题：当 KV 空间不足时，应该 preempt 哪个请求？
@@ -130,6 +132,10 @@ pip install -e ".[dev]"
 ```bash
 python -m pytest tests/ -v
 ```
+
+GitHub Actions 会在托管 runner 上运行 CPU-safe 单测，并在带有
+`self-hosted`、`linux`、`ascend` 标签的自托管 Ascend runner 上运行集成测试。
+Ascend 任务要求环境中已安装 `vllm`，如果运行时不可用会直接失败。
 
 ## 许可证
 

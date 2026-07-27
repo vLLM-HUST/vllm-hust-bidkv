@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+import importlib.util
+import os
+
 import pytest
 
 from bidkv.adapters.vllm.adapter import AdapterMetrics, VLLMAdapter
@@ -349,6 +352,11 @@ class TestVLLMImportability:
 
     def test_vllm_installed(self) -> None:
         """验证 vLLM 已安装。"""
+        if importlib.util.find_spec("vllm") is None:
+            if os.environ.get("BIDKV_REQUIRE_VLLM") == "1":
+                pytest.fail("vLLM is required in this CI job but is not installed")
+            pytest.skip("vLLM is not installed in this environment")
+
         import vllm
 
         assert hasattr(vllm, "__version__")
@@ -510,4 +518,3 @@ class _FakeScheduler:
 
     def _preempt_request(self, request: _FakeRequest, timestamp: float) -> None:
         self.preempted_requests.append(request.request_id)
-

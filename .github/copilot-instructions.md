@@ -9,8 +9,8 @@
 | 导入命名空间   | `bidkv`                                                              |
 | Python         | ≥ 3.10                                                               |
 | 外部依赖       | **零** — 仅依赖 Python stdlib                                        |
-| 论文           | SC 2026 投稿，deadline 2026-04-10                                    |
-| 当前 Phase     | **Phase D 论文写作冲刺** — §1/2/3/7/8 已修订，§4-6 待检查，admission responsiveness 主线 |
+| 论文           | SC 2026 已接收论文                                                   |
+| 当前 Phase     | **Artifact maintenance** — 论文已接收，继续维护实现、实验与复现材料 |
 
 ## 项目定位
 
@@ -384,7 +384,7 @@ python -m ruff check . && python -m ruff format --check .
 | Wave 4         | 03-24~28     | #053 全量 126+54 runs                       |
 | Gate-B         | 2026-03-31   | vLLM Mode A 全量 + SGLang 全量 目标         |
 | Phase D        | 04-01~08     | #039 论文写作冲刺                        |
-| SC 2026 投稿   | 2026-04-10   | 论文截止                                     |
+| SC 2026 已接收 | 2026-07     | 论文已接收                                     |
 
 ## 实验硬件
 

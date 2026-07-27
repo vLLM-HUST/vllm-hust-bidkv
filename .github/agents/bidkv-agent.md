@@ -1,6 +1,6 @@
 ---
 name: bidkv
-description: "BidKV 仓库开发助手 — framework-portable KV cache 请求调度原语。用于实现 BidKV solver、baseline 策略、vLLM/SGLang 适配器、实验框架。零外部依赖，SC 2026 论文实施。"
+description: "BidKV 仓库开发助手 — framework-portable KV cache 请求调度原语。用于实现 BidKV solver、baseline 策略、vLLM/SGLang 适配器、实验框架。零外部依赖，SC 2026 已接收论文 artifact。"
 argument-hint: "描述 BidKV 相关任务：baseline 策略实现、adapter 开发、实验运行、solver 修改、冻结方案约束检查等。"
 tools: ['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo']
 ---
@@ -16,8 +16,8 @@ tools: ['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo']
 | 导入命名空间   | `bidkv`                                                              |
 | Python         | ≥ 3.10                                                               |
 | 外部依赖       | **零** — 仅依赖 Python stdlib                                        |
-| 论文           | SC 2026 投稿，deadline 2026-04-10                                    |
-| 当前 Phase     | **实验方案已冻结 (v2.3-frozen)**，进入 Phase C 实施                   |
+| 论文           | SC 2026 已接收论文                                                   |
+| 当前 Phase     | **Artifact maintenance** — 论文已接收，继续维护实现、实验与复现材料 |
 
 ## 项目定位
 
@@ -351,7 +351,7 @@ python -m ruff check . && python -m ruff format --check .
 | Wave 4         | 03-24~28     | #053 全量 126+54 runs                       |
 | Gate-B         | 2026-03-31   | vLLM Mode A 全量 + SGLang 全量 目标         |
 | Phase D        | 04-01~08     | #039 论文写作冲刺                        |
-| SC 2026 投稿   | 2026-04-10   | 论文截止                                     |
+| SC 2026 已接收 | 2026-07     | 论文已接收                                     |
 
 ## 实验结果 JSON 数据格式（mixed 与 long_context 通用）
 

@@ -4,6 +4,8 @@ Framework-portable KV cache request scheduling primitive.
 
 [中文文档](README_zh.md)
 
+BidKV is the artifact repository for the SC 2026 paper **"BidKV: Utility-Guided Preemption Scheduling for KV-Pressure LLM Serving"** by Yanbo Chen, Mingqi Wang, Shuhao Zhang, Xiaofei Liao, and Hai Jin.
+
 ## Overview
 
 `bidkv` is a **zero-dependency** Python package that addresses the **victim-selection problem** under KV cache pressure: when KV memory is exhausted, which request should be preempted?
@@ -130,6 +132,11 @@ pip install -e ".[dev]"
 ```bash
 python -m pytest tests/ -v
 ```
+
+GitHub Actions runs CPU-safe tests on hosted runners and an Ascend integration
+job on a self-hosted runner labeled `self-hosted`, `linux`, and `ascend`. The
+Ascend job requires `vllm` to be installed and fails fast if the runtime is not
+available.
 
 ## License
 
