@@ -8,9 +8,8 @@ Flow
 ----
 1. ``EngineCore.__init__`` calls ``load_general_plugins()`` at startup.
 2. This plugin reads ``BIDKV_STRATEGY`` from the environment.
-3. If strategy != "preempt-evict", it monkey-patches ``Scheduler.__init__``
-   so that when the Scheduler is instantiated (later in ``EngineCore.__init__``),
-   BidKV hooks are automatically installed on the new Scheduler instance.
+3. Only an explicitly configured legacy experiment monkey-patches
+   ``Scheduler.__init__``. Installing BidKV by itself must not change vLLM.
 """
 
 from __future__ import annotations
@@ -29,7 +28,15 @@ def register() -> None:
     if _PATCHED:
         return
 
-    strategy = os.environ.get("BIDKV_STRATEGY", "preempt-evict")
+    strategy = os.environ.get("BIDKV_STRATEGY")
+    if not strategy:
+        logger.info(
+            "BidKV legacy scheduler plugin is inactive; "
+            "set BIDKV_STRATEGY for legacy experiments"
+        )
+        _PATCHED = True
+        return
+
     # ALL strategies install hooks for fair comparison.
     # preempt-evict hooks do FCFS (no reorder) — identical to vanilla vLLM
     # scheduling, but with the same infrastructure overhead for fairness.
