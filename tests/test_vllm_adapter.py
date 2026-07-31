@@ -425,6 +425,20 @@ class TestSchedulerHookIntegration:
         assert result == "schedule_called"
         assert scheduler.schedule_call_count == 1
 
+    def test_patched_schedule_forwards_new_scheduler_arguments(
+        self, adapter_active: VLLMAdapter
+    ) -> None:
+        """Keep the legacy hook compatible with vLLM's evolving schedule API."""
+        from bidkv.adapters.vllm.scheduler_hook import install_scheduler_hook
+
+        scheduler = self._make_fake_scheduler()
+        install_scheduler_hook(scheduler, adapter_active)
+
+        result = scheduler.schedule(True)
+        assert result == "schedule_called"
+        assert scheduler.schedule_call_count == 1
+        assert scheduler.last_throttle_prefills is True
+
     def test_patched_update_from_output_calls_original(self, adapter_active: VLLMAdapter) -> None:
         """验证 patched update_from_output 调用原始方法。"""
         from bidkv.adapters.vllm.scheduler_hook import install_scheduler_hook
@@ -496,8 +510,9 @@ class _FakeScheduler:
         self.running.append(req)
         return req
 
-    def schedule(self) -> str:
+    def schedule(self, throttle_prefills: bool = False) -> str:
         self.schedule_call_count += 1
+        self.last_throttle_prefills = throttle_prefills
         return "schedule_called"
 
     def update_from_output(self, scheduler_output: object, model_runner_output: object) -> str:
@@ -510,4 +525,3 @@ class _FakeScheduler:
 
     def _preempt_request(self, request: _FakeRequest, timestamp: float) -> None:
         self.preempted_requests.append(request.request_id)
-

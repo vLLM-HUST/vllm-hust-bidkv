@@ -697,7 +697,12 @@ def _proactive_srpt(scheduler: Any, adapter: VLLMAdapter) -> None:
     )
 
 
-def _patched_schedule(scheduler: Any, adapter: VLLMAdapter) -> Any:
+def _patched_schedule(
+    scheduler: Any,
+    adapter: VLLMAdapter,
+    *args: Any,
+    **kwargs: Any,
+) -> Any:
     """Patched schedule() — Mode A: SJF admission + strategy-specific preemption.
 
     Flow:
@@ -737,7 +742,7 @@ def _patched_schedule(scheduler: Any, adapter: VLLMAdapter) -> Any:
     # Feature OFF 快速路径
     if not adapter.config.is_active:
         orig = getattr(scheduler, f"{_ORIG_PREFIX}schedule")
-        return orig()
+        return orig(*args, **kwargs)
 
     # 同步 request tracking
     _sync_request_tracking(scheduler, adapter)
@@ -758,7 +763,7 @@ def _patched_schedule(scheduler: Any, adapter: VLLMAdapter) -> Any:
     _reorder_running_for_preemption(scheduler, adapter)
 
     orig = getattr(scheduler, f"{_ORIG_PREFIX}schedule")
-    result = orig()
+    result = orig(*args, **kwargs)
 
     return result
 
