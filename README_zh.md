@@ -105,6 +105,14 @@ HF_HUB_OFFLINE=1 python -m bidkv.experiments.sglang.runner \
 
 ## 框架集成（vLLM）
 
+与同级目录的 `vllm-hust-dev-hub` 配合时，仓库清单可将启用流程缩减为一条
+命令。dev-hub 会自动安装包、验证精确入口点并注入原生选择器配置：
+
+```bash
+cd ../vllm-hust-dev-hub
+./manage.sh restart --optimization bidkv
+```
+
 在 `vllm-hust` 中使用时，需要把 BidKV 安装到同一个 Python 环境。
 运行时通过 `vllm.victim_selector` 入口点自动发现它。仅安装不会改变调度行为；
 启动服务时需要显式选择并启用 BidKV：

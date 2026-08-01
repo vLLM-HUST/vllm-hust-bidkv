@@ -105,6 +105,15 @@ HF_HUB_OFFLINE=1 python -m bidkv.experiments.sglang.runner \
 
 ## Framework Integration (vLLM)
 
+With sibling `vllm-hust-dev-hub`, the repository manifest reduces activation
+to one command. The dev hub installs the package, verifies the exact entry
+point, and supplies the native selector configuration:
+
+```bash
+cd ../vllm-hust-dev-hub
+./manage.sh restart --optimization bidkv
+```
+
 For `vllm-hust`, install BidKV into the same Python environment. The runtime
 discovers it through the `vllm.victim_selector` entry point. Installing the
 package is inert by default; explicitly select and enable BidKV when serving:

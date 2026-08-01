@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -53,6 +54,23 @@ def test_native_and_legacy_entry_points_are_declared_separately() -> None:
         'bidkv = "bidkv.adapters.vllm_hust.selector:BidkvVictimSelector"'
         in config
     )
+
+
+def test_vllm_hust_optimization_manifest_matches_native_entry_point() -> None:
+    manifest = json.loads(
+        (REPO_ROOT / ".vllm-hust" / "optimization.json").read_text()
+    )
+
+    assert manifest["schema_version"] == 1
+    assert manifest["id"] == "bidkv"
+    assert manifest["entrypoint"] == {
+        "group": "vllm.victim_selector",
+        "name": "bidkv",
+    }
+    config = manifest["activation"]["extra_args"][1]
+    assert manifest["activation"]["vllm_plugins"] == ["ascend"]
+    assert config["victim_selector_plugin"] == "bidkv"
+    assert config["enable_utility_victim_selection"] is True
 
 
 def test_legacy_and_native_environment_switches_are_mutually_exclusive(
