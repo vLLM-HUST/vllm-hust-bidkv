@@ -55,6 +55,10 @@ def test_native_and_legacy_entry_points_are_declared_separately() -> None:
         in config
     )
 
+    from bidkv.adapters.vllm_hust.selector import BidkvVictimSelector
+
+    assert BidkvVictimSelector.vllm_victim_selector_api_version == 1
+
 
 def test_vllm_hust_optimization_manifest_matches_native_entry_point() -> None:
     manifest = json.loads(

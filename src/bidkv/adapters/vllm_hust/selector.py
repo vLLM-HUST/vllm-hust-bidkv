@@ -273,6 +273,8 @@ class BidkvVictimSelector:
         bidkv           — utility-ranked U = r/(δ+ε)
     """
 
+    vllm_victim_selector_api_version = 1
+
     def __init__(self, config: BidkvSelectorConfig) -> None:
         self.config = config
         self._last_utility_pick_ts = -math.inf
