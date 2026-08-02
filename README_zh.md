@@ -105,7 +105,50 @@ HF_HUB_OFFLINE=1 python -m bidkv.experiments.sglang.runner \
 
 ## 框架集成（vLLM）
 
-BidKV 通过 `vllm.general_plugins` 入口点注入——启动服务前设置环境变量即可：
+与同级目录的 `vllm-hust-dev-hub` 配合时，仓库清单可将启用流程缩减为一条
+命令。dev-hub 会自动安装包、验证精确入口点并注入原生选择器配置：
+
+```bash
+cd ../vllm-hust-dev-hub
+./manage.sh restart --optimization bidkv
+```
+
+在 `vllm-hust` 中使用时，需要把 BidKV 安装到同一个 Python 环境。
+运行时通过 `vllm.victim_selector` 入口点自动发现它。仅安装不会改变调度行为；
+启动服务时需要显式选择并启用 BidKV：
+
+```bash
+python -m pip install -e . --no-deps
+
+vllm serve meta-llama/Llama-3.1-8B-Instruct \
+    --enforce-eager \
+    --port 8000 \
+    --additional-config '{
+      "victim_selector_plugin": "bidkv",
+      "enable_utility_victim_selection": true,
+      "utility_strategy": "bidkv",
+      "utility_kv_gate": 0.95
+    }'
+```
+
+启动前可验证入口点：
+
+```bash
+python - <<'PY'
+from importlib.metadata import entry_points
+
+for ep in entry_points(group="vllm.victim_selector"):
+    print(ep.name, "->", ep.value)
+PY
+```
+
+也可以通过 `BIDKV_UTILITY_` 前缀的环境变量配置相同参数。
+`BIDKV_STRATEGY` 属于旧版实验适配器，它会 monkey patch Scheduler，不能与新的
+victim-selector 接入方式同时使用。
+
+### 旧版实验适配器
+
+仅在复现历史多策略实验时使用：
 
 ```bash
 BIDKV_STRATEGY=bidkv python -m bidkv.experiments.vllm.serve \

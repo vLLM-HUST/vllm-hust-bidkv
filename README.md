@@ -105,7 +105,52 @@ HF_HUB_OFFLINE=1 python -m bidkv.experiments.sglang.runner \
 
 ## Framework Integration (vLLM)
 
-BidKV injects into vLLM via the `vllm.general_plugins` entry-point — set the strategy before starting the server:
+With sibling `vllm-hust-dev-hub`, the repository manifest reduces activation
+to one command. The dev hub installs the package, verifies the exact entry
+point, and supplies the native selector configuration:
+
+```bash
+cd ../vllm-hust-dev-hub
+./manage.sh restart --optimization bidkv
+```
+
+For `vllm-hust`, install BidKV into the same Python environment. The runtime
+discovers it through the `vllm.victim_selector` entry point. Installing the
+package is inert by default; explicitly select and enable BidKV when serving:
+
+```bash
+python -m pip install -e . --no-deps
+
+vllm serve meta-llama/Llama-3.1-8B-Instruct \
+    --enforce-eager \
+    --port 8000 \
+    --additional-config '{
+      "victim_selector_plugin": "bidkv",
+      "enable_utility_victim_selection": true,
+      "utility_strategy": "bidkv",
+      "utility_kv_gate": 0.95
+    }'
+```
+
+Verify discovery before launching:
+
+```bash
+python - <<'PY'
+from importlib.metadata import entry_points
+
+for ep in entry_points(group="vllm.victim_selector"):
+    print(ep.name, "->", ep.value)
+PY
+```
+
+Environment variables with the `BIDKV_UTILITY_` prefix provide equivalent
+runtime configuration. `BIDKV_STRATEGY` belongs to the legacy experiment
+adapter, which monkey-patches the scheduler. Do not combine it with the native
+victim-selector integration.
+
+### Legacy experiment adapter
+
+Use this path only to reproduce the historical multi-strategy experiments:
 
 ```bash
 BIDKV_STRATEGY=bidkv python -m bidkv.experiments.vllm.serve \

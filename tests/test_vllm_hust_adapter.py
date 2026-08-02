@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -340,6 +341,41 @@ class TestBidkvVictimSelectorRuntime:
         assert len(snapshot["candidates"]) == 2
         assert snapshot["candidates"][0]["request_id"] == "r1"
         assert snapshot["candidates"][0]["selected"] is True
+
+    def test_observability_log_records_selected_victim(self):
+        from vllm.v1.core.sched.request_queue import SchedulingPolicy
+
+        selector = BidkvVictimSelector.from_vllm_config(
+            SimpleNamespace(
+                additional_config={
+                    "enable_utility_victim_selection": True,
+                    "utility_kv_gate": 0.8,
+                }
+            )
+        )
+        running = [
+            _make_request("r1", num_computed_tokens=180, output_tokens=10),
+            _make_request("r2", num_computed_tokens=90, output_tokens=80),
+        ]
+        selector.pick_victim(
+            running, SchedulingPolicy.FCFS, kv_utilization=1.0, now_s=42.0
+        )
+
+        logger = Mock()
+        selector.emit_observability_log(logger, "AsyncScheduler")
+
+        assert logger.info.call_count == 2
+        decision_format, *decision_args = logger.info.call_args_list[1].args
+        assert "latest_decision victim=%s" in decision_format
+        assert decision_args == [
+            "AsyncScheduler",
+            "r1",
+            "r2",
+            True,
+            1.0,
+            2,
+            "FCFS",
+        ]
 
     def test_largest_first_strategy(self):
         from vllm.v1.core.sched.request_queue import SchedulingPolicy

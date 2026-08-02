@@ -1,4 +1,4 @@
-"""vLLM general plugin — BidKV scheduler injection.
+"""Legacy vLLM general plugin for experiment-only scheduler injection.
 
 Registered as a ``vllm.general_plugins`` entry point so that it executes
 inside **every** vLLM process, including the EngineCore subprocess that is
@@ -10,6 +10,8 @@ Flow
 2. This plugin reads ``BIDKV_STRATEGY`` from the environment.
 3. Only an explicitly configured legacy experiment monkey-patches
    ``Scheduler.__init__``. Installing BidKV by itself must not change vLLM.
+
+Production serving uses the separate ``vllm.victim_selector`` entry point.
 """
 
 from __future__ import annotations
@@ -36,6 +38,14 @@ def register() -> None:
         )
         _PATCHED = True
         return
+
+    if os.environ.get("BIDKV_UTILITY_ENABLE") == "1":
+        raise RuntimeError(
+            "BIDKV_STRATEGY enables the legacy scheduler hook and cannot be "
+            "combined with BIDKV_UTILITY_ENABLE. Use the vllm.victim_selector "
+            "integration for serving, or unset BIDKV_UTILITY_ENABLE for legacy "
+            "experiments."
+        )
 
     # ALL strategies install hooks for fair comparison.
     # preempt-evict hooks do FCFS (no reorder) — identical to vanilla vLLM
@@ -73,6 +83,18 @@ def _patch_scheduler_init(strategy_name: str) -> None:
 
 def _install_bidkv(scheduler: object, strategy_name: str) -> None:
     """Install BidKV adapter + hooks on a live Scheduler instance."""
+    vllm_config = getattr(scheduler, "vllm_config", None)
+    additional_config = getattr(vllm_config, "additional_config", None) or {}
+    if (
+        additional_config.get("enable_utility_victim_selection")
+        or additional_config.get("victim_selector_plugin") == "bidkv"
+    ):
+        raise RuntimeError(
+            "BIDKV_STRATEGY cannot be combined with the native BidKV victim "
+            "selector. Remove BIDKV_STRATEGY for serving, or remove the victim "
+            "selector configuration for legacy experiments."
+        )
+
     from bidkv.adapters.vllm.adapter import VLLMAdapter
     from bidkv.baselines import BaselineRegistry
     from bidkv.config import BidKVConfig
