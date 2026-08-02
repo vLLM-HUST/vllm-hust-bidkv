@@ -289,6 +289,7 @@ class BidkvVictimSelector:
         self._last_preempted_request_id: str | None = None
         self._preemptions_per_request: dict[str, int] = defaultdict(int)
         self._recent_preempted_req_ids: deque[str] = deque(maxlen=snapshot_size)
+        self._last_decision: dict[str, Any] | None = None
         self._decision_snapshots: deque[dict[str, Any]] = deque(
             maxlen=snapshot_size
         )
@@ -353,6 +354,19 @@ class BidkvVictimSelector:
             metrics["consecutive_preempt_ratio"],
             metrics["preemptions_per_request_p95"],
         )
+        if self._last_decision is not None:
+            decision = self._last_decision
+            logger.info(
+                "[BidKV][%s] latest_decision victim=%s default_victim=%s "
+                "used_utility=%s kv_utilization=%s running=%d policy=%s",
+                scheduler_name,
+                decision["selected_victim_id"],
+                decision["default_victim_id"],
+                decision["used_utility"],
+                decision["kv_utilization"],
+                decision["running_size"],
+                decision["policy"],
+            )
         if self.config.utility_snapshot_enabled:
             snapshots = self.get_recent_snapshots(limit=1)
             if snapshots:
@@ -661,10 +675,19 @@ class BidkvVictimSelector:
         else:
             self._default_strategy_hits += 1
 
+        default_id = str(getattr(default_victim, "request_id", ""))
+        self._last_decision = {
+            "timestamp_s": round(now_s, 6),
+            "policy": getattr(policy, "name", str(policy)),
+            "used_utility": used_utility,
+            "kv_utilization": kv_utilization,
+            "running_size": running_size,
+            "selected_victim_id": request_id,
+            "default_victim_id": default_id,
+        }
         if self.config.utility_snapshot_enabled:
             top_k = max(1, int(self.config.utility_snapshot_top_k))
             selected_id = request_id
-            default_id = str(getattr(default_victim, "request_id", ""))
             snapshot_candidates = [
                 {
                     "rank": index + 1,
@@ -680,16 +703,7 @@ class BidkvVictimSelector:
                 for index, candidate in enumerate(ranked_candidates[:top_k])
             ]
             self._decision_snapshots.append(
-                {
-                    "timestamp_s": round(now_s, 6),
-                    "policy": getattr(policy, "name", str(policy)),
-                    "used_utility": used_utility,
-                    "kv_utilization": kv_utilization,
-                    "running_size": running_size,
-                    "selected_victim_id": selected_id,
-                    "default_victim_id": default_id,
-                    "candidates": snapshot_candidates,
-                }
+                {**self._last_decision, "candidates": snapshot_candidates}
             )
 
     @staticmethod
