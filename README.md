@@ -158,6 +158,43 @@ runtime configuration. `BIDKV_STRATEGY` belongs to the legacy experiment
 adapter, which monkey-patches the scheduler. Do not combine it with the native
 victim-selector integration.
 
+### Experimental typed bundle path
+
+BidKV also ships
+`bidkv/manifests/vllm-hust-extension-v1.json` for the experimental vLLM-HUST
+Extension Bundle v1 path. This manifest describes BidKV as a scheduler policy;
+it does not describe a KV store, connector, or external system. Resolve the
+installed manifest with `importlib.resources`, pass that exact file through
+`VLLM_EXTENSION_MANIFESTS`, and select
+`org.vllm-hust.bidkv/victim-selector` through
+`additional_config.victim_selector_component`.
+
+```bash
+BIDKV_MANIFEST=$(python -c 'from importlib.resources import files; print(files("bidkv").joinpath("manifests/vllm-hust-extension-v1.json"))')
+export VLLM_EXTENSION_MANIFESTS="$BIDKV_MANIFEST"
+export VLLM_EXTENSION_BUNDLES="org.vllm-hust.bidkv"
+
+vllm serve meta-llama/Llama-3.1-8B-Instruct \
+    --additional-config '{
+      "victim_selector_component": "org.vllm-hust.bidkv/victim-selector",
+      "enable_utility_victim_selection": true,
+      "utility_strategy": "bidkv",
+      "utility_kv_gate": 0.95
+    }'
+```
+
+Do not enable the typed manifest and the legacy `vllm.victim_selector` provider
+as two independent implementations. The typed scheduler materializer takes
+precedence when this manifest is admitted. To roll back, unset
+`VLLM_EXTENSION_MANIFESTS` and `VLLM_EXTENSION_BUNDLES` and restart; the runtime
+then returns to the installed legacy entry point. To bypass both paths during
+an incident, set `victim_selector_plugin_disabled=true` in
+`additional_config`, which selects the upstream-compatible no-op policy.
+
+This path remains experimental until matched legacy-versus-typed scheduler
+traces verify victim choices, metrics, failures, and rollback against an exact
+vLLM-HUST revision.
+
 ### Legacy experiment adapter
 
 Use this path only to reproduce the historical multi-strategy experiments:

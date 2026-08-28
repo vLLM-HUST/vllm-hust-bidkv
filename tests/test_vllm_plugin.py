@@ -60,6 +60,35 @@ def test_native_and_legacy_entry_points_are_declared_separately() -> None:
     assert BidkvVictimSelector.vllm_victim_selector_api_version == 1
 
 
+def test_typed_bundle_manifest_matches_native_selector() -> None:
+    manifest_path = (
+        REPO_ROOT
+        / "src"
+        / "bidkv"
+        / "manifests"
+        / "vllm-hust-extension-v1.json"
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert manifest["schema_version"] == "1.0"
+    assert manifest["bundle_id"] == "org.vllm-hust.bidkv"
+    assert manifest["host_api_range"] == ">=1,<2"
+    assert manifest["components"] == [
+        {
+            "component_id": "victim-selector",
+            "contracts": ["vllm.scheduler.policy.v1"],
+            "execution_planes": ["scheduler"],
+            "isolation": "trusted_in_process",
+            "implementation_ref": (
+                "bidkv.adapters.vllm_hust.selector:BidkvVictimSelector"
+            ),
+            "permissions": [],
+        }
+    ]
+    pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'bidkv = ["manifests/*.json"]' in pyproject
+
+
 def test_vllm_hust_optimization_manifest_matches_native_entry_point() -> None:
     manifest = json.loads(
         (REPO_ROOT / ".vllm-hust" / "optimization.json").read_text()

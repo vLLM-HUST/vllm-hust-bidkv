@@ -29,7 +29,8 @@
   "validation": [
     "python -m pytest tests/ -v",
     "ruff check .",
+    "validate src/bidkv/manifests/vllm-hust-extension-v1.json against the vLLM-HUST Extension Bundle v1 schema",
     "run matched framework experiments before publishing performance claims"
   ],
-  "compatibility_document": "README.md#configuration"
+  "compatibility_document": "README.md#framework-integration-vllm"
 }
