@@ -16,6 +16,16 @@ where $r$ = tokens freed, $\delta$ = surrogate disruption estimate.
 
 BidKV **does not compress tokens** — it only controls *who gets preempted*. The actual eviction is performed by the framework's native preempt + recompute path (vLLM) or RadixCache eviction (SGLang).
 
+## Ecosystem classification
+
+BidKV is a scheduler-local victim-selection policy component. It is not a KV
+store, transport, connector, compression mechanism, or external state system.
+The repository also contains framework adapters and experiment tooling, but
+those delivery surfaces do not change the policy's runtime role.
+
+See [`.vllm-hust/repository-profile.json`](./.vllm-hust/repository-profile.json)
+for the machine-readable boundary and migration contract.
+
 ## Module Layout
 
 | Module | Contents |

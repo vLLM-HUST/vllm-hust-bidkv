@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "canonical_registry": "https://github.com/vLLM-HUST/vllm-hust-docs/tree/codex/ecosystem-architecture-reorganization/registry",
+  "repository": "https://github.com/vLLM-HUST/vllm-hust-bidkv",
+  "repository_role": "runtime_component",
+  "relation_to_runtime": "extends_runtime_behavior",
+  "lifecycle": "incubating",
+  "artifacts": [
+    {
+      "id": "bidkv-scheduler-policy",
+      "artifact_type": "runtime_component",
+      "system_role": "scheduler_policy",
+      "delivery_model": "plugin_bundle",
+      "execution_planes": ["scheduler"],
+      "integration_contracts": ["vllm.scheduler.policy.v1"]
+    }
+  ],
+  "system_boundaries": {
+    "is": [
+      "a framework-portable victim-selection and preemption policy",
+      "a scheduler-plane component with vLLM and SGLang adapters"
+    ],
+    "is_not": [
+      "a KV store, transport, or connector",
+      "a KV compression implementation",
+      "an external state system or control plane"
+    ]
+  },
+  "validation": [
+    "python -m pytest tests/ -v",
+    "ruff check .",
+    "run matched framework experiments before publishing performance claims"
+  ],
+  "compatibility_document": "README.md#configuration"
+}
