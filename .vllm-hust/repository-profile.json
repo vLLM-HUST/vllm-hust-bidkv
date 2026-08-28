@@ -12,7 +12,11 @@
       "system_role": "scheduler_policy",
       "delivery_model": "plugin_bundle",
       "execution_planes": ["scheduler"],
-      "integration_contracts": ["vllm.scheduler.policy.v1"]
+      "integration_contracts": ["vllm.scheduler.policy.v1"],
+      "integration_surfaces": [
+        "vllm.victim_selector",
+        "vllm.general_plugins"
+      ]
     }
   ],
   "system_boundaries": {
