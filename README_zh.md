@@ -150,17 +150,18 @@ victim-selector 接入方式同时使用。
 
 BidKV 现在随包提供 `bidkv/manifests/vllm-hust-extension-v1.json`，用于实验性的
 vLLM-HUST Extension Bundle v1 路径。该 manifest 把 BidKV 描述为 scheduler
-policy，而不是 KV store、connector 或外部系统。使用 `importlib.resources`
-解析安装后的 manifest 绝对路径，通过 `VLLM_EXTENSION_MANIFESTS` 显式传入，
-并在 `additional_config.victim_selector_component` 中选择
+policy，而不是 KV store、connector 或外部系统。wheel 会通过
+`vllm.extension_bundles` 静态注册 manifest；注册过程不会 import BidKV，
+也不会启用调度行为。先检查并验证已安装 Bundle，再在
+`additional_config.victim_selector_component` 中选择
 `org.vllm-hust.bidkv/victim-selector`。
 
 ```bash
-BIDKV_MANIFEST=$(python -c 'from importlib.resources import files; print(files("bidkv").joinpath("manifests/vllm-hust-extension-v1.json"))')
-export VLLM_EXTENSION_MANIFESTS="$BIDKV_MANIFEST"
-export VLLM_EXTENSION_BUNDLES="org.vllm-hust.bidkv"
+vllm plugin inspect org.vllm-hust.bidkv
+vllm plugin validate org.vllm-hust.bidkv
 
 vllm serve meta-llama/Llama-3.1-8B-Instruct \
+    --extension org.vllm-hust.bidkv \
     --additional-config '{
       "victim_selector_component": "org.vllm-hust.bidkv/victim-selector",
       "enable_utility_victim_selection": true,
@@ -170,11 +171,11 @@ vllm serve meta-llama/Llama-3.1-8B-Instruct \
 ```
 
 不要把 typed manifest 与 legacy `vllm.victim_selector` provider 当作两个独立
-实现同时启用；manifest 准入后 typed scheduler materializer 具有优先级。回退时
-清除 `VLLM_EXTENSION_MANIFESTS` 与 `VLLM_EXTENSION_BUNDLES` 并重启，运行时会
-重新使用已安装的 legacy entry point。事故处置时若要同时绕过两条路径，可在
-`additional_config` 中设置 `victim_selector_plugin_disabled=true`，恢复为与
-upstream 一致的 no-op policy。
+实现同时启用；Bundle 准入后 typed scheduler materializer 具有优先级。回退时
+移除 `--extension` 和 `victim_selector_component`；若要恢复 legacy 路径，改用
+`victim_selector_plugin=bidkv` 并启动全新进程。事故处置时若要同时绕过两条路径，
+可在 `additional_config` 中设置 `victim_selector_plugin_disabled=true`，恢复为
+与 upstream 一致的 no-op policy。
 
 在针对明确 vLLM-HUST revision 的 legacy/typed 对照 scheduler trace 验证 victim
 选择、metrics、故障与回退之前，这条路径仍是 experimental。

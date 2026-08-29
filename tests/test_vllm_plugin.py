@@ -54,6 +54,8 @@ def test_native_and_legacy_entry_points_are_declared_separately() -> None:
         'bidkv = "bidkv.adapters.vllm_hust.selector:BidkvVictimSelector"'
         in config
     )
+    assert '[project.entry-points."vllm.extension_bundles"]' in config
+    assert '"org.vllm-hust.bidkv" = "bidkv.manifests"' in config
 
     from bidkv.adapters.vllm_hust.selector import BidkvVictimSelector
 

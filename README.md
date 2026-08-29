@@ -163,18 +163,19 @@ victim-selector integration.
 BidKV also ships
 `bidkv/manifests/vllm-hust-extension-v1.json` for the experimental vLLM-HUST
 Extension Bundle v1 path. This manifest describes BidKV as a scheduler policy;
-it does not describe a KV store, connector, or external system. Resolve the
-installed manifest with `importlib.resources`, pass that exact file through
-`VLLM_EXTENSION_MANIFESTS`, and select
+it does not describe a KV store, connector, or external system. The wheel
+registers the static manifest through `vllm.extension_bundles`; registration
+does not import BidKV or enable scheduling behavior. Inspect and validate the
+installed Bundle, then select
 `org.vllm-hust.bidkv/victim-selector` through
 `additional_config.victim_selector_component`.
 
 ```bash
-BIDKV_MANIFEST=$(python -c 'from importlib.resources import files; print(files("bidkv").joinpath("manifests/vllm-hust-extension-v1.json"))')
-export VLLM_EXTENSION_MANIFESTS="$BIDKV_MANIFEST"
-export VLLM_EXTENSION_BUNDLES="org.vllm-hust.bidkv"
+vllm plugin inspect org.vllm-hust.bidkv
+vllm plugin validate org.vllm-hust.bidkv
 
 vllm serve meta-llama/Llama-3.1-8B-Instruct \
+    --extension org.vllm-hust.bidkv \
     --additional-config '{
       "victim_selector_component": "org.vllm-hust.bidkv/victim-selector",
       "enable_utility_victim_selection": true,
@@ -185,11 +186,11 @@ vllm serve meta-llama/Llama-3.1-8B-Instruct \
 
 Do not enable the typed manifest and the legacy `vllm.victim_selector` provider
 as two independent implementations. The typed scheduler materializer takes
-precedence when this manifest is admitted. To roll back, unset
-`VLLM_EXTENSION_MANIFESTS` and `VLLM_EXTENSION_BUNDLES` and restart; the runtime
-then returns to the installed legacy entry point. To bypass both paths during
-an incident, set `victim_selector_plugin_disabled=true` in
-`additional_config`, which selects the upstream-compatible no-op policy.
+precedence when this Bundle is admitted. To roll back, remove `--extension`
+and `victim_selector_component`, select `victim_selector_plugin=bidkv` if the
+legacy path is desired, and start a fresh process. To bypass both paths during
+an incident, set `victim_selector_plugin_disabled=true` in `additional_config`,
+which selects the upstream-compatible no-op policy.
 
 This path remains experimental until matched legacy-versus-typed scheduler
 traces verify victim choices, metrics, failures, and rollback against an exact

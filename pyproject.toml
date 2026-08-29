@@ -73,3 +73,6 @@ bidkv = "bidkv.adapters.vllm.plugin:register"
 
 [project.entry-points."vllm.victim_selector"]
 bidkv = "bidkv.adapters.vllm_hust.selector:BidkvVictimSelector"
+
+[project.entry-points."vllm.extension_bundles"]
+"org.vllm-hust.bidkv" = "bidkv.manifests"
