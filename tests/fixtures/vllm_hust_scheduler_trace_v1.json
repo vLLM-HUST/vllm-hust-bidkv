@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "additional_config": {
+    "enable_utility_victim_selection": true,
+    "utility_strategy": "bidkv",
+    "utility_completion_weight": 0.5,
+    "utility_preempt_weight": 0.3,
+    "utility_kv_gate": 0.8,
+    "utility_cooldown_s": 5.0,
+    "utility_min_running": 2,
+    "utility_snapshot_enabled": true,
+    "utility_snapshot_top_k": 3,
+    "utility_snapshot_history_size": 8
+  },
+  "steps": [
+    {
+      "policy": "FCFS",
+      "kv_utilization": 0.92,
+      "now_s": 10.0,
+      "running": [
+        {"request_id": "r1", "priority": 0, "arrival_time": 1.0, "num_computed_tokens": 220, "output_tokens": 12, "max_tokens": 128, "num_preemptions": 0},
+        {"request_id": "r2", "priority": 0, "arrival_time": 2.0, "num_computed_tokens": 260, "output_tokens": 120, "max_tokens": 128, "num_preemptions": 3},
+        {"request_id": "r3", "priority": 0, "arrival_time": 3.0, "num_computed_tokens": 180, "output_tokens": 60, "max_tokens": 128, "num_preemptions": 1}
+      ]
+    },
+    {
+      "policy": "FCFS",
+      "kv_utilization": 0.55,
+      "now_s": 20.0,
+      "running": [
+        {"request_id": "r4", "priority": 0, "arrival_time": 4.0, "num_computed_tokens": 300, "output_tokens": 10, "max_tokens": 128, "num_preemptions": 0},
+        {"request_id": "r5", "priority": 0, "arrival_time": 5.0, "num_computed_tokens": 80, "output_tokens": 5, "max_tokens": 128, "num_preemptions": 0},
+        {"request_id": "r6", "priority": 0, "arrival_time": 6.0, "num_computed_tokens": 120, "output_tokens": 30, "max_tokens": 128, "num_preemptions": 1}
+      ]
+    },
+    {
+      "policy": "PRIORITY",
+      "kv_utilization": 0.96,
+      "now_s": 30.0,
+      "running": [
+        {"request_id": "r7", "priority": 1, "arrival_time": 7.0, "num_computed_tokens": 150, "output_tokens": 8, "max_tokens": 128, "num_preemptions": 0},
+        {"request_id": "r8", "priority": 4, "arrival_time": 8.0, "num_computed_tokens": 90, "output_tokens": 100, "max_tokens": 128, "num_preemptions": 2},
+        {"request_id": "r9", "priority": 2, "arrival_time": 9.0, "num_computed_tokens": 210, "output_tokens": 40, "max_tokens": 128, "num_preemptions": 1}
+      ]
+    },
+    {
+      "policy": "FCFS",
+      "kv_utilization": 0.99,
+      "now_s": 32.0,
+      "running": [
+        {"request_id": "r10", "priority": 0, "arrival_time": 10.0, "num_computed_tokens": 260, "output_tokens": 10, "max_tokens": 128, "num_preemptions": 0},
+        {"request_id": "r11", "priority": 0, "arrival_time": 11.0, "num_computed_tokens": 100, "output_tokens": 20, "max_tokens": 128, "num_preemptions": 0}
+      ]
+    }
+  ]
+}
