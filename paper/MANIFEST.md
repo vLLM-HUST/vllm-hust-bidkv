@@ -2,8 +2,8 @@
 
 - Status: advisor-authored storyline draft; no experiment result
 - Repository baseline: `945972fa936b12bc91a8850edfbbd97f9cce3fbb`
-- Artifact commit: `PENDING`
-- Draft PR head: `PENDING`
+- Artifact commit: `90a675cb700b7d6e4b4cdce064586f2bfc7ff076`
+- Draft PR head: metadata-only successor; exact remote head is recorded in the Draft PR body
 - TeX entry: `paper/main.tex`
 - Bibliography: `paper/references.bib` (intentionally empty; source disclosure in paper)
 - Evidence ledger: `paper/EVIDENCE_LEDGER.md`
