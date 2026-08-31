@@ -171,6 +171,14 @@ scheduling behavior.
 Manifest 0.2 is not a compatibility promise and must not be published as a
 stable Bundle v1 contract before all three host-provider acceptance gates pass.
 
+> **Host contract warning:** `vllm.victim_selector` is a legacy HUST
+> experimental hook and is absent from the fresh vLLM-HUST 0.23 fork. The
+> upstream direction is RFC
+> [#51608](https://github.com/vllm-project/vllm/issues/51608) and draft PR
+> [#51601](https://github.com/vllm-project/vllm/pull/51601), whose target
+> `vllm.scheduler_plugins`/PreemptionScore contract is not frozen. Do not add a
+> competing private hook to the new core or claim current 0.23 compatibility.
+
 ```bash
 pip install vllm-hust-ext bidkv
 vllm-hust-ext extension inspect org.vllm-hust.bidkv

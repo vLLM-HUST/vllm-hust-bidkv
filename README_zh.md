@@ -157,6 +157,13 @@ import BidKV，也不会启用调度行为。
 Manifest 0.2 不构成兼容性承诺；三类 Host Provider 验收全部通过前，不能把它
 作为稳定 Bundle v1 契约发布。
 
+> **宿主契约警告：** `vllm.victim_selector` 是旧 HUST 实验 hook，新 fork 的
+> vLLM-HUST 0.23 并不包含它。上游方向是 RFC
+> [#51608](https://github.com/vllm-project/vllm/issues/51608) 和 draft PR
+> [#51601](https://github.com/vllm-project/vllm/pull/51601)，其目标
+> `vllm.scheduler_plugins`/PreemptionScore 契约尚未冻结。不要向新核心再加入一套
+> 竞争的私有 hook，也不能宣称当前已兼容 0.23。
+
 ```bash
 pip install vllm-hust-ext bidkv
 vllm-hust-ext extension inspect org.vllm-hust.bidkv
