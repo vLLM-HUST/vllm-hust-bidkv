@@ -87,6 +87,20 @@ def test_typed_bundle_manifest_matches_native_selector() -> None:
             "permissions": [],
         }
     ]
+    assert manifest["activation"] == {
+        "entry_points": [
+            {"group": "vllm.victim_selector", "name": "bidkv"}
+        ],
+        "environment": {
+            "BIDKV_UTILITY_ENABLE": "1",
+            "BIDKV_UTILITY_STRATEGY": "bidkv",
+        },
+        "additional_config": {
+            "victim_selector_plugin": "bidkv",
+            "enable_utility_victim_selection": True,
+            "utility_strategy": "bidkv",
+        },
+    }
     pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
     assert 'bidkv = ["manifests/*.json"]' in pyproject
 
