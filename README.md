@@ -188,6 +188,18 @@ and start a fresh vLLM process to roll back:
 vllm-hust-ext extension disable org.vllm-hust.bidkv
 ```
 
+After the replacement vLLM process is running without BidKV, remove Manager
+state before uninstalling the Python distribution. This prevents a later
+reinstall from restoring stale enabled intent:
+
+```bash
+vllm-hust-ext extension forget org.vllm-hust.bidkv
+pip uninstall bidkv
+```
+
+`forget` does not stop an existing vLLM process; process restart remains owned
+by the vLLM operator.
+
 ### Legacy experiment adapter
 
 Use this path only to reproduce the historical multi-strategy experiments:

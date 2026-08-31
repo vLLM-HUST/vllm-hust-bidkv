@@ -173,6 +173,16 @@ vllm-hust-ext run -- vllm serve meta-llama/Llama-3.1-8B-Instruct
 vllm-hust-ext extension disable org.vllm-hust.bidkv
 ```
 
+确认新启动的 vLLM 进程已经回到未使用 BidKV 的路径后，应先清除 Manager 保存的
+配置和启用意图，再卸载 Python 包，避免以后重装时恢复陈旧状态：
+
+```bash
+vllm-hust-ext extension forget org.vllm-hust.bidkv
+pip uninstall bidkv
+```
+
+`forget` 不会停止已经运行的 vLLM 进程；进程重启仍由 vLLM 运维方负责。
+
 ### 旧版实验适配器
 
 仅在复现历史多策略实验时使用：
