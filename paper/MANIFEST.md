@@ -2,10 +2,10 @@
 
 - Status: advisor-authored storyline draft; no experiment result
 - Repository baseline: `945972fa936b12bc91a8850edfbbd97f9cce3fbb`
-- Artifact commit: `90a675cb700b7d6e4b4cdce064586f2bfc7ff076`
+- Artifact commit: `a7edee16056a36795f6c400fa71fc808f4e2b703`
 - Draft PR head: metadata-only successor; exact remote head is recorded in the Draft PR body
 - TeX entry: `paper/main.tex`
-- Bibliography: `paper/references.bib` (intentionally empty; source disclosure in paper)
+- Bibliography: `paper/references.bib` (2 verified primary-source entries, both cited)
 - Evidence ledger: `paper/EVIDENCE_LEDGER.md`
 - PDF: `paper/bidkv.pdf`
 - Full build transcript: `paper/tectonic.log`
@@ -21,11 +21,11 @@
 
 ## Artifact SHA256
 
-- `paper/main.tex`: `1595809a877de922f547f00514a71dda585a6546da8bbc8ff42493cc46fc949a`
-- `paper/references.bib`: `cc743f32348837e720ac8792be8b5657bd9995bcb2086ecc5bd5af0a6efe9de4`
+- `paper/main.tex`: `cc912f235b347fc457b2e16857170cb1acd4d6573ada0636f9ca2cbe6d92efb2`
+- `paper/references.bib`: `0c7d63cfbb523a2a86a3768a2b9e1cb0322da7b33bb89b48bb87844b2f40f20a`
 - `paper/EVIDENCE_LEDGER.md`: `9589054f13825bcc0ba4f4da9a796e4d2cc76ffe9c3cb86e81c3278750e529e3`
-- `paper/bidkv.pdf`: `c21658249eedc2fb1b732d8a92883db1ba9ffc77f4c2c12ee3e29a5eb735dd9a`
-- `paper/tectonic.log`: `3adc5877e802608be057adb143c4571eb4cc92ccfe06a5a6da752f7736135d28`
+- `paper/bidkv.pdf`: `9f2601b3154cf55615a4a5a6956f0a7c4597504bbd8a0da7a76645dc90c22069`
+- `paper/tectonic.log`: `3b42947ef731b94b6cb2db3da31a6b47f8f385103966217c3840092ebf11d7fc`
 
 The final metadata-only commit binds this manifest to the preceding artifact
 commit; the Draft PR body records both exact remote hashes.
