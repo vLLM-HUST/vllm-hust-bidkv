@@ -62,19 +62,35 @@ def test_native_and_legacy_entry_points_are_declared_separately() -> None:
     assert BidkvVictimSelector.vllm_victim_selector_api_version == 1
 
 
-def test_typed_bundle_manifest_matches_native_selector() -> None:
+def test_experimental_extension_manifest_matches_native_selector() -> None:
     manifest_path = (
         REPO_ROOT
         / "src"
         / "bidkv"
         / "manifests"
-        / "vllm-hust-extension-v1.json"
+        / "vllm-hust-extension-v0.2.json"
     )
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
-    assert manifest["schema_version"] == "1.0"
-    assert manifest["bundle_id"] == "org.vllm-hust.bidkv"
-    assert manifest["host_api_range"] == ">=1,<2"
+    assert manifest["schema_version"] == "0.2-experimental"
+    assert manifest["extension_id"] == "org.vllm-hust.bidkv"
+    assert manifest["kind"] == "scheduler_policy"
+    assert manifest["host"] == {
+        "provider": "vllm",
+        "name": "vllm",
+        "version_range": ">=0.18,<0.20",
+        "api_range": ">=1,<2",
+    }
+    assert manifest["runtime"]["process_scope"] == "scheduler"
+    assert manifest["lifecycle_owner"] == "vllm"
+    assert manifest["requires_services"] == []
+    assert manifest["implementation"] == [
+        {
+            "type": "python_entry_point",
+            "group": "vllm.victim_selector",
+            "name": "bidkv",
+        }
+    ]
     assert manifest["components"] == [
         {
             "component_id": "victim-selector",

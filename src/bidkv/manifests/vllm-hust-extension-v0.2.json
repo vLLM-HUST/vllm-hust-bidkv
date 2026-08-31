@@ -1,8 +1,34 @@
 {
-  "schema_version": "1.0",
-  "bundle_id": "org.vllm-hust.bidkv",
-  "bundle_version": "0.1.1",
-  "host_api_range": ">=1,<2",
+  "schema_version": "0.2-experimental",
+  "extension_id": "org.vllm-hust.bidkv",
+  "extension_version": "0.1.1",
+  "kind": "scheduler_policy",
+  "host": {
+    "provider": "vllm",
+    "name": "vllm",
+    "version_range": ">=0.18,<0.20",
+    "api_range": ">=1,<2"
+  },
+  "runtime": {
+    "type": "python",
+    "process_scope": "scheduler",
+    "isolation": "trusted_in_process"
+  },
+  "lifecycle_owner": "vllm",
+  "protocols": [
+    {
+      "name": "vllm.victim_selector",
+      "version_range": ">=1,<2"
+    }
+  ],
+  "implementation": [
+    {
+      "type": "python_entry_point",
+      "group": "vllm.victim_selector",
+      "name": "bidkv"
+    }
+  ],
+  "requires_services": [],
   "components": [
     {
       "component_id": "victim-selector",

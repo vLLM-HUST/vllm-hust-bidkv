@@ -161,12 +161,15 @@ victim-selector integration.
 ### vLLM-HUST Extension Manager path
 
 BidKV also ships
-`bidkv/manifests/vllm-hust-extension-v1.json` for the vLLM-HUST Extension
-Bundle v1 path. This manifest describes BidKV as an in-process scheduler
+`bidkv/manifests/vllm-hust-extension-v0.2.json` for the experimental
+vLLM-HUST Extension Manifest 0.2 path. This manifest describes BidKV as an in-process scheduler
 policy; it does not describe a KV store, KV connector, or external control
 plane. The wheel registers the static manifest through
 `vllm_hust.extension_bundles`; discovery neither imports BidKV nor enables
 scheduling behavior.
+
+Manifest 0.2 is not a compatibility promise and must not be published as a
+stable Bundle v1 contract before all three host-provider acceptance gates pass.
 
 ```bash
 pip install vllm-hust-ext bidkv

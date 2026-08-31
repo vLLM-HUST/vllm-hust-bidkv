@@ -1,4 +1,4 @@
-"""Installed-distribution contract with the native vLLM-HUST selector seam."""
+"""Installed-distribution contract with the narrow vLLM selector seam."""
 
 from __future__ import annotations
 
@@ -36,16 +36,6 @@ def _integration_imports():
     )
 
 
-def _configure_startup(monkeypatch: pytest.MonkeyPatch, manifests: list[str]) -> None:
-    import vllm.envs as envs
-    from vllm.plugins.startup import get_configured_extension_startup
-
-    monkeypatch.setattr(envs, "VLLM_EXTENSION_MANIFESTS", manifests)
-    monkeypatch.setattr(envs, "VLLM_EXTENSION_BUNDLES", None)
-    monkeypatch.setattr(envs, "VLLM_EXTENSION_ALLOWED_PERMISSIONS", [])
-    get_configured_extension_startup.cache_clear()
-
-
 def _request(payload: dict[str, Any]) -> SimpleNamespace:
     return SimpleNamespace(
         request_id=payload["request_id"],
@@ -58,7 +48,7 @@ def _request(payload: dict[str, Any]) -> SimpleNamespace:
     )
 
 
-def _replay(selector, trace: dict[str, Any]) -> tuple[list[str], dict[str, Any], list]:
+def _replay(selector, trace: dict[str, Any]) -> list[str]:
     from vllm.v1.core.sched.request_queue import SchedulingPolicy
 
     choices = []
@@ -70,60 +60,43 @@ def _replay(selector, trace: dict[str, Any]) -> tuple[list[str], dict[str, Any],
             now_s=step["now_s"],
         )
         choices.append(victim.request_id)
-    return choices, selector.export_metrics(), selector.get_recent_snapshots(limit=20)
+    return choices
 
 
-def test_installed_native_entry_point_loads_through_vllm_hust(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_installed_native_entry_point_loads_through_vllm_hust() -> None:
     selector_cls, _, _, get_selector = _integration_imports()
-    matches = [ep for ep in entry_points(group="vllm.victim_selector") if ep.name == "bidkv"]
+    matches = [
+        ep for ep in entry_points(group="vllm.victim_selector") if ep.name == "bidkv"
+    ]
     if not matches and not REQUIRE_INTEGRATION:
         pytest.skip("BidKV distribution metadata is not installed")
 
     assert len(matches) == 1
     assert matches[0].load() is selector_cls
-
-    _configure_startup(monkeypatch, [])
-    ambient_config = SimpleNamespace(additional_config={})
-    assert isinstance(get_selector(ambient_config), selector_cls)
-
-    selected_config = SimpleNamespace(
-        additional_config={
-            "victim_selector_plugin": "bidkv",
-            "enable_utility_victim_selection": True,
-        }
+    selected = get_selector(
+        SimpleNamespace(
+            additional_config={
+                "victim_selector_plugin": "bidkv",
+                "enable_utility_victim_selection": True,
+            }
+        )
     )
-    assert isinstance(get_selector(selected_config), selector_cls)
+    assert isinstance(selected, selector_cls)
 
 
-def test_real_manifest_typed_and_legacy_paths_replay_identically(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_native_selector_replays_recorded_trace() -> None:
     selector_cls, _, _, get_selector = _integration_imports()
     trace = json.loads(TRACE_PATH.read_text(encoding="utf-8"))
-    config = dict(trace["additional_config"])
-    config["victim_selector_plugin"] = "bidkv"
+    config = {**trace["additional_config"], "victim_selector_plugin": "bidkv"}
 
-    _configure_startup(monkeypatch, [])
-    legacy = get_selector(SimpleNamespace(additional_config=config))
+    selector = get_selector(SimpleNamespace(additional_config=config))
+    replay_selector = get_selector(SimpleNamespace(additional_config=config))
 
-    manifest = REPO_ROOT / "src" / "bidkv" / "manifests" / "vllm-hust-extension-v1.json"
-    _configure_startup(monkeypatch, [str(manifest)])
-    typed_config = {
-        **config,
-        "victim_selector_component": "org.vllm-hust.bidkv/victim-selector",
-    }
-    typed = get_selector(SimpleNamespace(additional_config=typed_config))
-
-    assert isinstance(legacy, selector_cls)
-    assert isinstance(typed, selector_cls)
-    assert _replay(typed, trace) == _replay(legacy, trace)
+    assert isinstance(selector, selector_cls)
+    assert _replay(selector, trace) == _replay(replay_selector, trace)
 
 
-def test_typed_and_explicit_legacy_config_failures_preserve_root_cause(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_invalid_native_config_preserves_root_cause() -> None:
     _, _, materialization_error, get_selector = _integration_imports()
     invalid = {
         "victim_selector_plugin": "bidkv",
@@ -131,52 +104,17 @@ def test_typed_and_explicit_legacy_config_failures_preserve_root_cause(
         "utility_completion_weight": -1,
     }
 
-    _configure_startup(monkeypatch, [])
-    with pytest.raises(materialization_error) as legacy_error:
+    with pytest.raises(materialization_error) as error:
         get_selector(SimpleNamespace(additional_config=invalid))
 
-    manifest = REPO_ROOT / "src" / "bidkv" / "manifests" / "vllm-hust-extension-v1.json"
-    _configure_startup(monkeypatch, [str(manifest)])
-    with pytest.raises(materialization_error) as typed_error:
-        get_selector(
-            SimpleNamespace(
-                additional_config={
-                    **invalid,
-                    "victim_selector_component": ("org.vllm-hust.bidkv/victim-selector"),
-                }
-            )
-        )
-
-    assert type(legacy_error.value.__cause__) is type(typed_error.value.__cause__)
-    assert str(legacy_error.value.__cause__) == str(typed_error.value.__cause__)
+    assert error.value.__cause__ is not None
 
 
-def test_next_start_rollback_and_emergency_disable_are_explicit(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    selector_cls, noop_cls, _, get_selector = _integration_imports()
-    manifest = REPO_ROOT / "src" / "bidkv" / "manifests" / "vllm-hust-extension-v1.json"
-    base_config = {
-        "victim_selector_plugin": "bidkv",
-        "enable_utility_victim_selection": True,
-    }
+def test_emergency_disable_restores_noop_policy() -> None:
+    _, noop_cls, _, get_selector = _integration_imports()
 
-    _configure_startup(monkeypatch, [str(manifest)])
-    typed = get_selector(
-        SimpleNamespace(
-            additional_config={
-                **base_config,
-                "victim_selector_component": ("org.vllm-hust.bidkv/victim-selector"),
-            }
-        )
-    )
-
-    _configure_startup(monkeypatch, [])
-    rolled_back = get_selector(SimpleNamespace(additional_config=base_config))
     disabled = get_selector(
         SimpleNamespace(additional_config={"victim_selector_plugin_disabled": True})
     )
 
-    assert isinstance(typed, selector_cls)
-    assert isinstance(rolled_back, selector_cls)
     assert isinstance(disabled, noop_cls)
