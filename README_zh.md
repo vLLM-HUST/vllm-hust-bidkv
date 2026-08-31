@@ -153,6 +153,9 @@ Manifest 0.2 不构成兼容性承诺；三类 Host Provider 验收全部通过�
 > `vllm.scheduler_plugins`/PreemptionScore 契约尚未冻结。不要向新核心再加入一套
 > 竞争的私有 hook，也不能宣称当前已兼容 0.23。
 
+具体的语义映射、draft 代码与设计文档差异以及迁移门禁见
+[上游 scheduler 契约差距](docs/upstream-scheduler-contract-gap.md)。
+
 ```bash
 pip install vllm-hust-ext bidkv
 vllm-hust-ext extension inspect org.vllm-hust.bidkv

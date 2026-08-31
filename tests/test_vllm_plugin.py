@@ -111,6 +111,17 @@ def test_obsolete_dev_hub_activation_manifest_is_removed() -> None:
     assert not (REPO_ROOT / ".vllm-hust" / "optimization.json").exists()
 
 
+def test_upstream_contract_gap_keeps_draft_and_release_boundaries_explicit() -> None:
+    gap = (REPO_ROOT / "docs" / "upstream-scheduler-contract-gap.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "f8b7db61e446911e0d62fcb8220f863d6098c471" in gap
+    assert "minimum BidKV serving contract" in gap
+    assert "does not register the private" in gap
+    assert "No compatibility range may include the fresh official fork" in gap
+
+
 def test_legacy_and_native_environment_switches_are_mutually_exclusive(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

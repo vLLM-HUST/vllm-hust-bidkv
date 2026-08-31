@@ -170,6 +170,9 @@ stable Bundle v1 contract before all three host-provider acceptance gates pass.
 > `vllm.scheduler_plugins`/PreemptionScore contract is not frozen. Do not add a
 > competing private hook to the new core or claim current 0.23 compatibility.
 
+The exact semantic mapping, draft code/design mismatch, and migration gates
+are tracked in [the upstream scheduler contract gap](docs/upstream-scheduler-contract-gap.md).
+
 ```bash
 pip install vllm-hust-ext bidkv
 vllm-hust-ext extension inspect org.vllm-hust.bidkv
