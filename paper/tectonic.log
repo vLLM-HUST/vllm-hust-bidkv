@@ -1,3 +1,6 @@
+make: Entering directory '/home/shuhao/.codex/worktrees/paper-request-fix-20260831/bidkv/paper'
+mkdir -p build
+/home/shuhao/.conda/envs/neuromem/bin/tectonic -X compile main.tex --outdir build --keep-logs
 note: "version 2" Tectonic command-line interface activated
 note: Running TeX ...
 warning: main.tex:25: Underfull \hbox (badness 1275) in paragraph at lines 25--25
@@ -11,7 +14,12 @@ warning: main.tex:74: Underfull \hbox (badness 10000) in paragraph at lines 74--
 warning: main.tex:74: Underfull \hbox (badness 1067) in paragraph at lines 74--74
 warning: main.tex:74: Underfull \hbox (badness 10000) in paragraph at lines 74--74
 warning: main.tex:74: Underfull \hbox (badness 7576) in paragraph at lines 74--74
-note: Rerunning TeX because "main.out" changed ...
+warning: main.tex:96: Underfull \hbox (badness 2189) in paragraph at lines 95--96
+warning: main.tex:96: Underfull \hbox (badness 1418) in paragraph at lines 95--96
+warning: main.tex:96: Underfull \hbox (badness 1163) in paragraph at lines 95--96
+warning: main.tex:96: Underfull \hbox (badness 1320) in paragraph at lines 95--96
+note: Running BibTeX on main.aux ...
+note: Rerunning TeX because bibtex was run ...
 warning: main.tex:25: Underfull \hbox (badness 1275) in paragraph at lines 25--25
 warning: main.tex:27: Underfull \vbox (badness 10000) has occurred while \output is active
 warning: main.tex:29: Underfull \hbox (badness 1132) in paragraph at lines 28--29
@@ -23,8 +31,32 @@ warning: main.tex:74: Underfull \hbox (badness 10000) in paragraph at lines 74--
 warning: main.tex:74: Underfull \hbox (badness 1067) in paragraph at lines 74--74
 warning: main.tex:74: Underfull \hbox (badness 10000) in paragraph at lines 74--74
 warning: main.tex:74: Underfull \hbox (badness 7576) in paragraph at lines 74--74
+warning: main.tex:96: Underfull \hbox (badness 2189) in paragraph at lines 95--96
+warning: main.tex:96: Underfull \hbox (badness 1418) in paragraph at lines 95--96
+warning: main.tex:96: Underfull \hbox (badness 1163) in paragraph at lines 95--96
+warning: main.tex:96: Underfull \hbox (badness 1320) in paragraph at lines 95--96
+warning: main.bbl:18: Underfull \hbox (badness 3989) in paragraph at lines 12--18
+note: Rerunning TeX because "main.aux" changed ...
+warning: main.tex:25: Underfull \hbox (badness 1275) in paragraph at lines 25--25
+warning: main.tex:27: Underfull \vbox (badness 10000) has occurred while \output is active
+warning: main.tex:29: Underfull \hbox (badness 1132) in paragraph at lines 28--29
+warning: main.tex:31: Underfull \hbox (badness 10000) in paragraph at lines 30--31
+warning: main.tex:42: Underfull \hbox (badness 10000) in paragraph at lines 41--42
+warning: main.tex:42: Underfull \hbox (badness 1946) in paragraph at lines 41--42
+warning: main.tex:74: Underfull \hbox (badness 10000) in paragraph at lines 74--74
+warning: main.tex:74: Underfull \hbox (badness 10000) in paragraph at lines 74--74
+warning: main.tex:74: Underfull \hbox (badness 1067) in paragraph at lines 74--74
+warning: main.tex:74: Underfull \hbox (badness 10000) in paragraph at lines 74--74
+warning: main.tex:74: Underfull \hbox (badness 7576) in paragraph at lines 74--74
+warning: main.tex:96: Underfull \hbox (badness 2189) in paragraph at lines 95--96
+warning: main.tex:96: Underfull \hbox (badness 1472) in paragraph at lines 95--96
+warning: main.tex:96: Underfull \hbox (badness 1163) in paragraph at lines 95--96
+warning: main.tex:96: Underfull \hbox (badness 1320) in paragraph at lines 95--96
+warning: main.bbl:18: Underfull \hbox (badness 3989) in paragraph at lines 12--18
 warning: warnings were issued by the TeX engine; use --print and/or --keep-logs for details.
 note: Running xdvipdfmx ...
-note: Writing `paper/build/main.log` (12.9267578125 KiB)
-note: Writing `paper/build/main.pdf` (54.619140625 KiB)
-note: Skipped writing 2 intermediate files (use --keep-intermediates to keep them)
+note: Writing `build/main.log` (13.5693359375 KiB)
+note: Writing `build/main.pdf` (59.2568359375 KiB)
+note: Writing `build/main.blg` (191 B)
+note: Skipped writing 3 intermediate files (use --keep-intermediates to keep them)
+make: Leaving directory '/home/shuhao/.codex/worktrees/paper-request-fix-20260831/bidkv/paper'

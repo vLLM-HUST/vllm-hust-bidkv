@@ -92,9 +92,12 @@ Days 1--3 freeze versioned workload traces, pressure events, candidate-universe 
 
 \balance
 \section{Related Work Boundary}
-The repository contains no verified bibliography with stable metadata and claim mappings. To avoid invented citations, \texttt{references.bib} is intentionally empty. Future related work must distinguish request preemption, cache eviction, prefix sharing, compression, and tiering rather than grouping all KV techniques under one mechanism.
+PagedAttention and vLLM establish block-level KV management and a native serving baseline~\cite{kwon2023pagedattention}. A large-provider characterization shows that production KV-cache behavior depends on workload and cache-management effects rather than capacity alone~\cite{wang2025kvcache}. BidKV is narrower: it selects a request-level preemption victim under a fixed candidate universe. Prefix sharing, compression, and tiering remain separate mechanism classes and cannot be credited to this selector.
 
 \section{Conclusion}
 BidKV is a request-level victim selector, not a KV compressor. Its capacity-over-disruption ranking is plausible and testable, but current evidence stops at host contracts. The next contribution gate is a matched serving result that proves correct native preempt/recompute, calibrates the surrogate, beats the strongest deployable victim baseline, and identifies negative pressure and ownership regimes.
+
+\bibliographystyle{plain}
+\bibliography{references}
 
 \end{document}
