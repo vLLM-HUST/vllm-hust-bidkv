@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
-"""BidKV victim selector plugin for vLLM HUST.
+"""Legacy BidKV victim selector for a pinned vLLM-HUST fork.
 
-Implements the ``VictimSelector`` protocol and registers via the
-``vllm.victim_selector`` entry-point group.
+Implements the historical ``VictimSelector`` protocol. The main BidKV
+distribution deliberately does not register its non-upstream entry-point
+group; this module remains importable for contract replay only.
 
 Utility formula:
     U = r / (delta + epsilon)

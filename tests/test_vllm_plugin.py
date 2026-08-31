@@ -10,7 +10,6 @@ import pytest
 
 from bidkv.adapters.vllm import plugin
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -44,16 +43,12 @@ def test_explicit_legacy_strategy_enables_scheduler_hook(
     assert plugin._PATCHED is True
 
 
-def test_native_and_legacy_entry_points_are_declared_separately() -> None:
-    config = (REPO_ROOT / "pyproject.toml").read_text()
+def test_only_upstream_general_plugin_and_project_manifest_are_registered() -> None:
+    config = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
     assert '[project.entry-points."vllm.general_plugins"]' in config
     assert 'bidkv = "bidkv.adapters.vllm.plugin:register"' in config
-    assert '[project.entry-points."vllm.victim_selector"]' in config
-    assert (
-        'bidkv = "bidkv.adapters.vllm_hust.selector:BidkvVictimSelector"'
-        in config
-    )
+    assert '[project.entry-points."vllm.victim_selector"]' not in config
     assert '[project.entry-points."vllm_hust.extension_bundles"]' in config
     assert '"org.vllm-hust.bidkv" = "bidkv.manifests"' in config
 
@@ -63,13 +58,7 @@ def test_native_and_legacy_entry_points_are_declared_separately() -> None:
 
 
 def test_experimental_extension_manifest_matches_native_selector() -> None:
-    manifest_path = (
-        REPO_ROOT
-        / "src"
-        / "bidkv"
-        / "manifests"
-        / "vllm-hust-extension-v0.2.json"
-    )
+    manifest_path = REPO_ROOT / "src" / "bidkv" / "manifests" / "vllm-hust-extension-v0.2.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
     assert manifest["schema_version"] == "0.2-experimental"
@@ -86,9 +75,10 @@ def test_experimental_extension_manifest_matches_native_selector() -> None:
     assert manifest["requires_services"] == []
     assert manifest["implementation"] == [
         {
-            "type": "python_entry_point",
-            "group": "vllm.victim_selector",
-            "name": "bidkv",
+            "type": "python_module",
+            "module": "bidkv.adapters.vllm_hust.selector",
+            "object": "BidkvVictimSelector",
+            "status": "legacy_unregistered",
         }
     ]
     assert manifest["components"] == [
@@ -97,16 +87,12 @@ def test_experimental_extension_manifest_matches_native_selector() -> None:
             "contracts": ["vllm.scheduler.policy.v1"],
             "execution_planes": ["scheduler"],
             "isolation": "trusted_in_process",
-            "implementation_ref": (
-                "bidkv.adapters.vllm_hust.selector:BidkvVictimSelector"
-            ),
+            "implementation_ref": ("bidkv.adapters.vllm_hust.selector:BidkvVictimSelector"),
             "permissions": [],
         }
     ]
     assert manifest["activation"] == {
-        "entry_points": [
-            {"group": "vllm.victim_selector", "name": "bidkv"}
-        ],
+        "entry_points": [],
         "environment": {
             "BIDKV_UTILITY_ENABLE": "1",
             "BIDKV_UTILITY_STRATEGY": "bidkv",
@@ -121,21 +107,8 @@ def test_experimental_extension_manifest_matches_native_selector() -> None:
     assert 'bidkv = ["manifests/*.json"]' in pyproject
 
 
-def test_vllm_hust_optimization_manifest_matches_native_entry_point() -> None:
-    manifest = json.loads(
-        (REPO_ROOT / ".vllm-hust" / "optimization.json").read_text()
-    )
-
-    assert manifest["schema_version"] == 1
-    assert manifest["id"] == "bidkv"
-    assert manifest["entrypoint"] == {
-        "group": "vllm.victim_selector",
-        "name": "bidkv",
-    }
-    config = manifest["activation"]["extra_args"][1]
-    assert manifest["activation"]["vllm_plugins"] == ["ascend"]
-    assert config["victim_selector_plugin"] == "bidkv"
-    assert config["enable_utility_victim_selection"] is True
+def test_obsolete_dev_hub_activation_manifest_is_removed() -> None:
+    assert not (REPO_ROOT / ".vllm-hust" / "optimization.json").exists()
 
 
 def test_legacy_and_native_environment_switches_are_mutually_exclusive(
@@ -158,9 +131,7 @@ def test_legacy_and_native_environment_switches_are_mutually_exclusive(
 def test_legacy_hook_rejects_native_selector_configuration(
     additional_config: dict[str, object],
 ) -> None:
-    scheduler = SimpleNamespace(
-        vllm_config=SimpleNamespace(additional_config=additional_config)
-    )
+    scheduler = SimpleNamespace(vllm_config=SimpleNamespace(additional_config=additional_config))
 
     with pytest.raises(RuntimeError, match="native BidKV victim selector"):
         plugin._install_bidkv(scheduler, "bidkv")

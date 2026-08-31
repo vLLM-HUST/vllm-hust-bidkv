@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
-"""vLLM HUST adapter for BidKV victim selector plugin.
+"""Legacy vLLM-HUST victim-selector adapter for pinned contract replay.
 
-Provides :class:`BidkvVictimSelector` that implements the
-``VictimSelector`` protocol from ``vllm.v1.core.sched.victim_selector``,
-auto-discovered via the ``vllm.victim_selector`` entry-point group.
+The adapter remains importable for historical validation, but the main BidKV
+distribution deliberately does not register the non-upstream
+``vllm.victim_selector`` entry-point group.
 """
 
 from bidkv.adapters.vllm_hust.selector import (

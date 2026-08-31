@@ -115,18 +115,11 @@ HF_HUB_OFFLINE=1 python -m bidkv.experiments.sglang.runner \
 
 ## Framework Integration (vLLM)
 
-With sibling `vllm-hust-dev-hub`, the repository manifest reduces activation
-to one command. The dev hub installs the package, verifies the exact entry
-point, and supplies the native selector configuration:
-
-```bash
-cd ../vllm-hust-dev-hub
-./manage.sh restart --optimization bidkv
-```
-
-For `vllm-hust`, install BidKV into the same Python environment. The runtime
-discovers it through the `vllm.victim_selector` entry point. Installing the
-package is inert by default; explicitly select and enable BidKV when serving:
+The historical HUST fork exposed `vllm.victim_selector`. BidKV retains that
+adapter as an importable compatibility module for pinned replay, but the main
+distribution no longer registers the non-upstream entry-point namespace. The
+following launch shape applies only to a pinned legacy fork that already owns
+that contract; it is not valid for a fresh official vLLM fork:
 
 ```bash
 python -m pip install -e . --no-deps
@@ -142,21 +135,19 @@ vllm serve meta-llama/Llama-3.1-8B-Instruct \
     }'
 ```
 
-Verify discovery before launching:
+Verify the legacy module without claiming runtime discovery:
 
 ```bash
 python - <<'PY'
-from importlib.metadata import entry_points
-
-for ep in entry_points(group="vllm.victim_selector"):
-    print(ep.name, "->", ep.value)
+from bidkv.adapters.vllm_hust.selector import BidkvVictimSelector
+print(BidkvVictimSelector.vllm_victim_selector_api_version)
 PY
 ```
 
-Environment variables with the `BIDKV_UTILITY_` prefix provide equivalent
-runtime configuration. `BIDKV_STRATEGY` belongs to the legacy experiment
-adapter, which monkey-patches the scheduler. Do not combine it with the native
-victim-selector integration.
+Environment variables with the `BIDKV_UTILITY_` prefix belong to the same
+pinned legacy contract. `BIDKV_STRATEGY` is a separate historical experiment
+adapter that monkey-patches the scheduler. Neither path is a supported fresh
+official-vLLM integration.
 
 ### vLLM-HUST Extension Manager path
 
@@ -183,14 +174,18 @@ stable Bundle v1 contract before all three host-provider acceptance gates pass.
 pip install vllm-hust-ext bidkv
 vllm-hust-ext extension inspect org.vllm-hust.bidkv
 vllm-hust-ext extension validate org.vllm-hust.bidkv
-vllm-hust-ext extension enable org.vllm-hust.bidkv
-vllm-hust-ext run -- vllm serve meta-llama/Llama-3.1-8B-Instruct
+vllm-hust-ext extension status org.vllm-hust.bidkv
 ```
 
-The manager merges the manifest's environment and `additional_config` into the
-launch command. It deliberately does not replace `VLLM_PLUGINS`, since doing so
-could suppress a required platform plugin such as Ascend. Disable the extension
-and start a fresh vLLM process to roll back:
+On a fresh official vLLM installation, status must remain `incompatible` or
+`degraded` and `run` refuses activation. A pinned legacy operator may provide
+explicit host and `vllm.victim_selector` protocol evidence, but this is only a
+replay path. The alpha gate requires migration to the stabilized upstream
+Preemption contract, real scheduler invocation, conflict and failure tests,
+and next-process rollback. Until then, there is no supported enable command.
+
+For a legacy replay that was explicitly enabled, disable the saved intent and
+start a fresh vLLM process to roll back:
 
 ```bash
 vllm-hust-ext extension disable org.vllm-hust.bidkv

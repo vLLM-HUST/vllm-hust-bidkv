@@ -105,17 +105,9 @@ HF_HUB_OFFLINE=1 python -m bidkv.experiments.sglang.runner \
 
 ## 框架集成（vLLM）
 
-与同级目录的 `vllm-hust-dev-hub` 配合时，仓库清单可将启用流程缩减为一条
-命令。dev-hub 会自动安装包、验证精确入口点并注入原生选择器配置：
-
-```bash
-cd ../vllm-hust-dev-hub
-./manage.sh restart --optimization bidkv
-```
-
-在 `vllm-hust` 中使用时，需要把 BidKV 安装到同一个 Python 环境。
-运行时通过 `vllm.victim_selector` 入口点自动发现它。仅安装不会改变调度行为；
-启动服务时需要显式选择并启用 BidKV：
+历史 HUST fork 曾提供 `vllm.victim_selector`。BidKV 仍保留可导入的兼容模块，
+用于固定旧版本的契约回放，但主发行包不再注册这个非上游 entry-point 命名空间。
+下面的启动形态只适用于已经拥有该契约的固定旧 fork，不能用于新的官方 vLLM fork：
 
 ```bash
 python -m pip install -e . --no-deps
@@ -131,20 +123,17 @@ vllm serve meta-llama/Llama-3.1-8B-Instruct \
     }'
 ```
 
-启动前可验证入口点：
+可验证旧适配器模块，但不能把这当成运行时已经支持自动发现：
 
 ```bash
 python - <<'PY'
-from importlib.metadata import entry_points
-
-for ep in entry_points(group="vllm.victim_selector"):
-    print(ep.name, "->", ep.value)
+from bidkv.adapters.vllm_hust.selector import BidkvVictimSelector
+print(BidkvVictimSelector.vllm_victim_selector_api_version)
 PY
 ```
 
-也可以通过 `BIDKV_UTILITY_` 前缀的环境变量配置相同参数。
-`BIDKV_STRATEGY` 属于旧版实验适配器，它会 monkey patch Scheduler，不能与新的
-victim-selector 接入方式同时使用。
+`BIDKV_UTILITY_` 前缀变量同样只属于这个固定旧契约。`BIDKV_STRATEGY` 是另一条
+会 monkey patch Scheduler 的历史实验路径；两者都不是对新官方 vLLM 的支持。
 
 ### vLLM-HUST Extension Manager 路径
 
@@ -168,13 +157,16 @@ Manifest 0.2 不构成兼容性承诺；三类 Host Provider 验收全部通过�
 pip install vllm-hust-ext bidkv
 vllm-hust-ext extension inspect org.vllm-hust.bidkv
 vllm-hust-ext extension validate org.vllm-hust.bidkv
-vllm-hust-ext extension enable org.vllm-hust.bidkv
-vllm-hust-ext run -- vllm serve meta-llama/Llama-3.1-8B-Instruct
+vllm-hust-ext extension status org.vllm-hust.bidkv
 ```
 
-管理器会把 manifest 中的环境变量和 `additional_config` 合并进启动命令。它不会
-替换 `VLLM_PLUGINS`，否则可能误关 Ascend 等必需的平台插件。回退时停用扩展并
-启动一个新的 vLLM 进程：
+在新的官方 vLLM 环境中，状态必须保持 `incompatible` 或 `degraded`，Manager 的
+`run` 会拒绝激活。固定旧 fork 的操作者可以显式提供宿主版本和
+`vllm.victim_selector` 协议证据，但这只用于回放。alpha 门禁要求先迁移到稳定后的
+上游 Preemption 契约，并完成真实 scheduler 调用、冲突/失败和下次进程回退测试；
+在此之前没有受支持的启用命令。
+
+如果旧回放曾被显式启用，回退时停用保存的意图并启动一个新的 vLLM 进程：
 
 ```bash
 vllm-hust-ext extension disable org.vllm-hust.bidkv

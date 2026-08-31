@@ -11,7 +11,9 @@ Flow
 3. Only an explicitly configured legacy experiment monkey-patches
    ``Scheduler.__init__``. Installing BidKV by itself must not change vLLM.
 
-Production serving uses the separate ``vllm.victim_selector`` entry point.
+The old HUST fork used a separate ``vllm.victim_selector`` entry point. The
+main BidKV distribution no longer registers that non-upstream namespace; the
+adapter remains importable only for pinned legacy-fork replay.
 """
 
 from __future__ import annotations
@@ -33,8 +35,7 @@ def register() -> None:
     strategy = os.environ.get("BIDKV_STRATEGY")
     if not strategy:
         logger.info(
-            "BidKV legacy scheduler plugin is inactive; "
-            "set BIDKV_STRATEGY for legacy experiments"
+            "BidKV legacy scheduler plugin is inactive; set BIDKV_STRATEGY for legacy experiments"
         )
         _PATCHED = True
         return
@@ -42,9 +43,9 @@ def register() -> None:
     if os.environ.get("BIDKV_UTILITY_ENABLE") == "1":
         raise RuntimeError(
             "BIDKV_STRATEGY enables the legacy scheduler hook and cannot be "
-            "combined with BIDKV_UTILITY_ENABLE. Use the vllm.victim_selector "
-            "integration for serving, or unset BIDKV_UTILITY_ENABLE for legacy "
-            "experiments."
+            "combined with BIDKV_UTILITY_ENABLE. The victim-selector adapter "
+            "is only for a pinned legacy fork; unset BIDKV_UTILITY_ENABLE for "
+            "legacy monkey-patch experiments."
         )
 
     # ALL strategies install hooks for fair comparison.
@@ -59,8 +60,11 @@ def register() -> None:
     if os.environ.get("BIDKV_SKIP_MEM_CHECK") == "1":
         try:
             import vllm.v1.core.kv_cache_utils as _kv_utils
+
             _kv_utils.check_enough_kv_cache_memory = lambda *_a, **_kw: None
-            logger.info("BidKV plugin: patched check_enough_kv_cache_memory (BIDKV_SKIP_MEM_CHECK=1)")
+            logger.info(
+                "BidKV plugin: patched check_enough_kv_cache_memory (BIDKV_SKIP_MEM_CHECK=1)"
+            )
         except ImportError:
             pass
 
