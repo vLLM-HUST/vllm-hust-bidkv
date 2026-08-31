@@ -158,43 +158,32 @@ runtime configuration. `BIDKV_STRATEGY` belongs to the legacy experiment
 adapter, which monkey-patches the scheduler. Do not combine it with the native
 victim-selector integration.
 
-### Experimental typed bundle path
+### vLLM-HUST Extension Manager path
 
 BidKV also ships
-`bidkv/manifests/vllm-hust-extension-v1.json` for the experimental vLLM-HUST
-Extension Bundle v1 path. This manifest describes BidKV as a scheduler policy;
-it does not describe a KV store, connector, or external system. The wheel
-registers the static manifest through `vllm.extension_bundles`; registration
-does not import BidKV or enable scheduling behavior. Inspect and validate the
-installed Bundle, then select
-`org.vllm-hust.bidkv/victim-selector` through
-`additional_config.victim_selector_component`.
+`bidkv/manifests/vllm-hust-extension-v1.json` for the vLLM-HUST Extension
+Bundle v1 path. This manifest describes BidKV as an in-process scheduler
+policy; it does not describe a KV store, KV connector, or external control
+plane. The wheel registers the static manifest through
+`vllm_hust.extension_bundles`; discovery neither imports BidKV nor enables
+scheduling behavior.
 
 ```bash
-vllm plugin inspect org.vllm-hust.bidkv
-vllm plugin validate org.vllm-hust.bidkv
-
-vllm serve meta-llama/Llama-3.1-8B-Instruct \
-    --extension org.vllm-hust.bidkv \
-    --additional-config '{
-      "victim_selector_component": "org.vllm-hust.bidkv/victim-selector",
-      "enable_utility_victim_selection": true,
-      "utility_strategy": "bidkv",
-      "utility_kv_gate": 0.95
-    }'
+pip install vllm-hust-ext bidkv
+vllm-hust-ext extension inspect org.vllm-hust.bidkv
+vllm-hust-ext extension validate org.vllm-hust.bidkv
+vllm-hust-ext extension enable org.vllm-hust.bidkv
+vllm-hust-ext run -- vllm serve meta-llama/Llama-3.1-8B-Instruct
 ```
 
-Do not enable the typed manifest and the legacy `vllm.victim_selector` provider
-as two independent implementations. The typed scheduler materializer takes
-precedence when this Bundle is admitted. To roll back, remove `--extension`
-and `victim_selector_component`, select `victim_selector_plugin=bidkv` if the
-legacy path is desired, and start a fresh process. To bypass both paths during
-an incident, set `victim_selector_plugin_disabled=true` in `additional_config`,
-which selects the upstream-compatible no-op policy.
+The manager merges the manifest's environment and `additional_config` into the
+launch command. It deliberately does not replace `VLLM_PLUGINS`, since doing so
+could suppress a required platform plugin such as Ascend. Disable the extension
+and start a fresh vLLM process to roll back:
 
-This path remains experimental until matched legacy-versus-typed scheduler
-traces verify victim choices, metrics, failures, and rollback against an exact
-vLLM-HUST revision.
+```bash
+vllm-hust-ext extension disable org.vllm-hust.bidkv
+```
 
 ### Legacy experiment adapter
 
