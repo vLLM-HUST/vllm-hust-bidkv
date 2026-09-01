@@ -184,9 +184,18 @@ class TestBidkvVictimSelectorRuntime:
             )
         )
         running = [
-            _make_request("r1", num_computed_tokens=220, output_tokens=12, max_tokens=128, num_preemptions=0),
-            _make_request("r2", num_computed_tokens=260, output_tokens=120, max_tokens=128, num_preemptions=3),
-            _make_request("r3", num_computed_tokens=180, output_tokens=60, max_tokens=128, num_preemptions=1),
+            _make_request(
+                "r1", num_computed_tokens=220, output_tokens=12,
+                max_tokens=128, num_preemptions=0,
+            ),
+            _make_request(
+                "r2", num_computed_tokens=260, output_tokens=120,
+                max_tokens=128, num_preemptions=3,
+            ),
+            _make_request(
+                "r3", num_computed_tokens=180, output_tokens=60,
+                max_tokens=128, num_preemptions=1,
+            ),
         ]
         victim = selector.pick_victim(running, SchedulingPolicy.FCFS)
         assert victim.request_id == "r1"
@@ -200,8 +209,14 @@ class TestBidkvVictimSelectorRuntime:
             )
         )
         running = [
-            _make_request("r1", num_computed_tokens=50, output_tokens=10, max_tokens=None, num_preemptions=0),
-            _make_request("r2", num_computed_tokens=70, output_tokens=20, max_tokens=0, num_preemptions=0),
+            _make_request(
+                "r1", num_computed_tokens=50, output_tokens=10,
+                max_tokens=None, num_preemptions=0,
+            ),
+            _make_request(
+                "r2", num_computed_tokens=70, output_tokens=20,
+                max_tokens=0, num_preemptions=0,
+            ),
         ]
         victim = selector.pick_victim(running, SchedulingPolicy.FCFS)
         assert victim.request_id in {"r1", "r2"}

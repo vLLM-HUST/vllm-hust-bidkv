@@ -58,7 +58,8 @@ class TestExperimentConfig:
         assert config.strategies == ALL_STRATEGIES
         assert config.workloads == ALL_WORKLOADS
         assert config.runs_per_combo == 3
-        assert config.total_runs == 5 * 2 * 3 * 3  # 90 (5 strategies × 2 workloads × 3 rates × 3 runs)
+        # 90 = 5 strategies × 2 workloads × 3 rates × 3 runs.
+        assert config.total_runs == 5 * 2 * 3 * 3
 
     def test_custom_config(self) -> None:
         config = ExperimentConfig(

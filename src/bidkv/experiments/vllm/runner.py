@@ -408,7 +408,15 @@ class VLLMExperimentRunner:
                 with open(f"/proc/{entry}/cmdline") as f:
                     cmd = f.read().replace("\0", " ")[:150]
                 # Only kill bidkv/vllm/EngineCore/resource_tracker processes
-                if any(kw in cmd for kw in ("bidkv", "vllm", "EngineCore", "resource_tracker", "spawn_main", "multiprocessing.spawn")):
+                process_markers = (
+                    "bidkv",
+                    "vllm",
+                    "EngineCore",
+                    "resource_tracker",
+                    "spawn_main",
+                    "multiprocessing.spawn",
+                )
+                if any(marker in cmd for marker in process_markers):
                     os.kill(pid_i, signal.SIGKILL)
                     killed.append(f"PID {pid_i}: {cmd[:80]}")
             except (OSError, ProcessLookupError):

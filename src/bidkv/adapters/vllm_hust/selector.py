@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
-"""BidKV victim selector plugin for vLLM HUST.
+"""Legacy BidKV victim selector for a pinned vLLM-HUST fork.
 
-Implements the ``VictimSelector`` protocol and registers via the
-``vllm.victim_selector`` entry-point group.
+Implements the historical ``VictimSelector`` protocol. The main BidKV
+distribution deliberately does not register its non-upstream entry-point
+group; this module remains importable for contract replay only.
 
 Utility formula:
     U = r / (delta + epsilon)
@@ -459,9 +460,12 @@ class BidkvVictimSelector:
     def _pick_bidkv_victim(
         self, running, policy, kv_utilization, now
     ) -> Request:
-        if self.config.utility_kv_gate > 0 and kv_utilization is not None:
-            if kv_utilization >= self.config.utility_kv_gate:
-                self._kv_pressure_events += 1
+        if (
+            self.config.utility_kv_gate > 0
+            and kv_utilization is not None
+            and kv_utilization >= self.config.utility_kv_gate
+        ):
+            self._kv_pressure_events += 1
 
         default_victim = self._pick_default_victim(running, policy)
         utility_enabled = self._can_use_utility(
@@ -473,7 +477,10 @@ class BidkvVictimSelector:
             reason_parts = ["main_switch_off"] if not self._utility_enabled else []
             if len(running) < self.config.utility_min_running:
                 reason_parts.append(f"running({len(running)})<min({self.config.utility_min_running})")
-            if self.config.utility_kv_gate > 0 and (kv_utilization or 0) < self.config.utility_kv_gate:
+            if (
+                self.config.utility_kv_gate > 0
+                and (kv_utilization or 0) < self.config.utility_kv_gate
+            ):
                 reason_parts.append(f"kv({kv_utilization:.2f})<gate({self.config.utility_kv_gate})")
             logging.getLogger("vllm").info(
                 "[BidKV] FALLBACK | victim=%s (default) | reason=%s | kv_util=%.2f | running=%d",
@@ -538,12 +545,11 @@ class BidkvVictimSelector:
     ) -> bool:
         if running_size < self.config.utility_min_running:
             return False
-        if self.config.utility_kv_gate > 0:
-            if (
-                kv_utilization is None
-                or kv_utilization < self.config.utility_kv_gate
-            ):
-                return False
+        if self.config.utility_kv_gate > 0 and (
+            kv_utilization is None
+            or kv_utilization < self.config.utility_kv_gate
+        ):
+            return False
         if (
             self.config.utility_cooldown_s > 0
             and self._last_utility_pick_ts > -math.inf

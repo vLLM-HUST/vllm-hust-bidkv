@@ -105,46 +105,78 @@ HF_HUB_OFFLINE=1 python -m bidkv.experiments.sglang.runner \
 
 ## 框架集成（vLLM）
 
-与同级目录的 `vllm-hust-dev-hub` 配合时，仓库清单可将启用流程缩减为一条
-命令。dev-hub 会自动安装包、验证精确入口点并注入原生选择器配置：
+当前 vLLM-HUST 0.23 提供通用 typed `vllm.scheduler.policy.v1` 宿主契约；
+BidKV 只提供策略实现，不修改 scheduler 的抢占、KV 清理和重排逻辑。官方 vLLM
+尚不支持此 HUST 契约。
 
 ```bash
-cd ../vllm-hust-dev-hub
-./manage.sh restart --optimization bidkv
+pip install vllm-hust-ext bidkv
+vllm-hust-ext extension enable org.vllm-hust.bidkv
+vllm-hust-ext run -- vllm serve meta-llama/Llama-3.1-8B-Instruct \
+    --enforce-eager --port 8000
 ```
 
-在 `vllm-hust` 中使用时，需要把 BidKV 安装到同一个 Python 环境。
-运行时通过 `vllm.victim_selector` 入口点自动发现它。仅安装不会改变调度行为；
-启动服务时需要显式选择并启用 BidKV：
-
-```bash
-python -m pip install -e . --no-deps
-
-vllm serve meta-llama/Llama-3.1-8B-Instruct \
-    --enforce-eager \
-    --port 8000 \
-    --additional-config '{
-      "victim_selector_plugin": "bidkv",
-      "enable_utility_victim_selection": true,
-      "utility_strategy": "bidkv",
-      "utility_kv_gate": 0.95
-    }'
-```
-
-启动前可验证入口点：
+可验证策略实现的 API 版本：
 
 ```bash
 python - <<'PY'
-from importlib.metadata import entry_points
-
-for ep in entry_points(group="vllm.victim_selector"):
-    print(ep.name, "->", ep.value)
+from bidkv.adapters.vllm_hust.selector import BidkvVictimSelector
+print(BidkvVictimSelector.vllm_victim_selector_api_version)
 PY
 ```
 
-也可以通过 `BIDKV_UTILITY_` 前缀的环境变量配置相同参数。
-`BIDKV_STRATEGY` 属于旧版实验适配器，它会 monkey patch Scheduler，不能与新的
-victim-selector 接入方式同时使用。
+`BIDKV_STRATEGY` 是会 monkey patch Scheduler 的历史实验路径，不属于新的 Manager
+启动链；安装包不会默认启用它。
+
+### vLLM-HUST Extension Manager 路径
+
+BidKV 现在随包提供 `bidkv/manifests/vllm-hust-extension-v0.2.json`，用于实验性的
+vLLM-HUST Extension Manifest 0.2 路径。该 manifest 把 BidKV 描述为进程内
+scheduler policy，而不是 KV store、KV connector 或外部 control plane。
+wheel 会通过 `vllm_hust.extension_bundles` 静态注册 manifest；发现过程既不会
+import BidKV，也不会启用调度行为。
+
+Manifest 0.2 不构成兼容性承诺；三类 Host Provider 验收全部通过前，不能把它
+作为稳定 Bundle v1 契约发布。
+
+> **宿主边界：** vLLM-HUST 0.23 支持 `vllm.scheduler.policy.v1`；官方 vLLM
+> 尚不支持。上游方向是 RFC
+> [#51608](https://github.com/vllm-project/vllm/issues/51608) 和 draft PR
+> [#51601](https://github.com/vllm-project/vllm/pull/51601)，其目标
+> `vllm.scheduler_plugins`/PreemptionScore 契约尚未冻结。HUST 的接口保持最小、
+> 通用且不包含 BidKV 名称；不能据此宣称兼容官方 vLLM。
+
+具体的语义映射、draft 代码与设计文档差异以及迁移门禁见
+[上游 scheduler 契约差距](docs/upstream-scheduler-contract-gap.md)。
+
+```bash
+pip install vllm-hust-ext bidkv
+vllm-hust-ext extension inspect org.vllm-hust.bidkv
+vllm-hust-ext extension validate org.vllm-hust.bidkv
+vllm-hust-ext extension status org.vllm-hust.bidkv
+```
+
+在 vLLM-HUST 0.23 环境中，Manager 会把通用 manifest 转成宿主原生启动 manifest，
+并选择 `org.vllm-hust.bidkv/victim-selector`。在官方 vLLM 环境中，Manager 必须报告
+`incompatible` 或 `degraded` 并拒绝激活。91 上的核心契约测试和真实 BidKV
+materialization/轨迹回放以及真实 Qwen3-0.6B KV 压力抢占、停用、重启回退已经
+通过；从干净发布镜像和 wheel 重复该结果仍是 alpha 发布门禁。
+
+如果旧回放曾被显式启用，回退时停用保存的意图并启动一个新的 vLLM 进程：
+
+```bash
+vllm-hust-ext extension disable org.vllm-hust.bidkv
+```
+
+确认新启动的 vLLM 进程已经回到未使用 BidKV 的路径后，应先清除 Manager 保存的
+配置和启用意图，再卸载 Python 包，避免以后重装时恢复陈旧状态：
+
+```bash
+vllm-hust-ext extension forget org.vllm-hust.bidkv
+pip uninstall bidkv
+```
+
+`forget` 不会停止已经运行的 vLLM 进程；进程重启仍由 vLLM 运维方负责。
 
 ### 旧版实验适配器
 

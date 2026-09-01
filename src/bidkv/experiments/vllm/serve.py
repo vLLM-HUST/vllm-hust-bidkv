@@ -12,11 +12,11 @@ BIDKV_STRATEGY=largest-first python -m bidkv.experiments.vllm.serve \
 
 Hook mechanism
 --------------
-BidKV hooks are injected via the ``vllm.general_plugins`` entry point
-(see ``bidkv.adapters.vllm.plugin``). The plugin reads ``BIDKV_STRATEGY``
-from the environment and patches ``Scheduler.__init__`` so that BidKV hooks
-are automatically installed when the Scheduler is created — including inside
-the EngineCore subprocess that vLLM spawns via ``multiprocessing.spawn``.
+When the separate ``bidkv-vllm-legacy`` package is installed, BidKV hooks are
+injected via its ``vllm.general_plugins`` entry point (implemented by
+``bidkv.adapters.vllm.plugin``). The main ``bidkv`` wheel does not register
+this automatic hook. The legacy plugin reads ``BIDKV_STRATEGY`` and patches
+``Scheduler.__init__`` inside the EngineCore subprocess.
 
 This module only needs to ensure ``BIDKV_STRATEGY`` is set before starting
 the vLLM server.
@@ -26,10 +26,26 @@ from __future__ import annotations
 
 import logging
 import os
+from importlib.metadata import entry_points
 
 logger = logging.getLogger(__name__)
 
 _STRATEGY_NAME: str = os.environ.get("BIDKV_STRATEGY", "preempt-evict")
+
+
+def _legacy_entry_point_installed() -> bool:
+    discovered = entry_points()
+    if hasattr(discovered, "select"):
+        candidates = discovered.select(group="vllm.general_plugins", name="bidkv")
+    else:  # pragma: no cover - Python 3.10 compatibility
+        candidates = [
+            item
+            for item in discovered.get("vllm.general_plugins", ())
+            if item.name == "bidkv"
+        ]
+    return any(
+        item.value == "bidkv.adapters.vllm.plugin:register" for item in candidates
+    )
 
 
 def main() -> None:
@@ -41,6 +57,13 @@ def main() -> None:
 
     strategy = _STRATEGY_NAME
     logger.info("BidKV experiment server starting (strategy=%s)", strategy)
+
+    if not _legacy_entry_point_installed():
+        raise RuntimeError(
+            "legacy experiment replay requires the separate "
+            "bidkv-vllm-legacy package; the main bidkv wheel intentionally "
+            "does not register vllm.general_plugins"
+        )
 
     if strategy == "preempt-evict":
         logger.info("preempt-evict: using vanilla vLLM (no BidKV)")

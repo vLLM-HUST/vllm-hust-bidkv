@@ -275,15 +275,11 @@ def _reorder_waiting_for_admission(scheduler: Any, adapter: VLLMAdapter) -> None
     preempt-evict is the true zero-intelligence baseline
     (FCFS waiting + LIFO preemption = vanilla vLLM behaviour).
     """
-    import time
-
     strategy_name = adapter._experiment_strategy_name
 
     waiting = getattr(scheduler, "waiting", None)
     if waiting is None or len(waiting) <= 1:
         return
-
-    now = time.monotonic()
 
     if strategy_name == "preempt-evict":
         return

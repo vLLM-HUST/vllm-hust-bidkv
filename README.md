@@ -16,6 +16,16 @@ where $r$ = tokens freed, $\delta$ = surrogate disruption estimate.
 
 BidKV **does not compress tokens** — it only controls *who gets preempted*. The actual eviction is performed by the framework's native preempt + recompute path (vLLM) or RadixCache eviction (SGLang).
 
+## Ecosystem classification
+
+BidKV is a scheduler-local victim-selection policy component. It is not a KV
+store, transport, connector, compression mechanism, or external state system.
+The repository also contains framework adapters and experiment tooling, but
+those delivery surfaces do not change the policy's runtime role.
+
+See [`.vllm-hust/repository-profile.json`](./.vllm-hust/repository-profile.json)
+for the machine-readable boundary and migration contract.
+
 ## Module Layout
 
 | Module | Contents |
@@ -105,57 +115,102 @@ HF_HUB_OFFLINE=1 python -m bidkv.experiments.sglang.runner \
 
 ## Framework Integration (vLLM)
 
-With sibling `vllm-hust-dev-hub`, the repository manifest reduces activation
-to one command. The dev hub installs the package, verifies the exact entry
-point, and supplies the native selector configuration:
+vLLM-HUST 0.23 exposes the generic typed `vllm.scheduler.policy.v1` host
+contract. BidKV supplies only the policy implementation and does not own
+preemption, KV cleanup, or queue mutation. Official vLLM does not yet support
+this HUST contract.
 
 ```bash
-cd ../vllm-hust-dev-hub
-./manage.sh restart --optimization bidkv
+pip install vllm-hust-ext bidkv
+vllm-hust-ext extension enable org.vllm-hust.bidkv
+vllm-hust-ext run -- vllm serve meta-llama/Llama-3.1-8B-Instruct \
+    --enforce-eager --port 8000
 ```
 
-For `vllm-hust`, install BidKV into the same Python environment. The runtime
-discovers it through the `vllm.victim_selector` entry point. Installing the
-package is inert by default; explicitly select and enable BidKV when serving:
-
-```bash
-python -m pip install -e . --no-deps
-
-vllm serve meta-llama/Llama-3.1-8B-Instruct \
-    --enforce-eager \
-    --port 8000 \
-    --additional-config '{
-      "victim_selector_plugin": "bidkv",
-      "enable_utility_victim_selection": true,
-      "utility_strategy": "bidkv",
-      "utility_kv_gate": 0.95
-    }'
-```
-
-Verify discovery before launching:
+Verify the policy implementation API version:
 
 ```bash
 python - <<'PY'
-from importlib.metadata import entry_points
-
-for ep in entry_points(group="vllm.victim_selector"):
-    print(ep.name, "->", ep.value)
+from bidkv.adapters.vllm_hust.selector import BidkvVictimSelector
+print(BidkvVictimSelector.vllm_victim_selector_api_version)
 PY
 ```
 
-Environment variables with the `BIDKV_UTILITY_` prefix provide equivalent
-runtime configuration. `BIDKV_STRATEGY` belongs to the legacy experiment
-adapter, which monkey-patches the scheduler. Do not combine it with the native
-victim-selector integration.
+`BIDKV_STRATEGY` belongs to a separate historical experiment adapter that
+monkey-patches the scheduler. The main wheel does not register
+`vllm.general_plugins`; installing `bidkv` therefore cannot auto-import the
+legacy hook.
+
+### vLLM-HUST Extension Manager path
+
+BidKV also ships
+`bidkv/manifests/vllm-hust-extension-v0.2.json` for the experimental
+vLLM-HUST Extension Manifest 0.2 path. This manifest describes BidKV as an in-process scheduler
+policy; it does not describe a KV store, KV connector, or external control
+plane. The wheel registers the static manifest through
+`vllm_hust.extension_bundles`; discovery neither imports BidKV nor enables
+scheduling behavior.
+
+Manifest 0.2 is not a compatibility promise and must not be published as a
+stable Bundle v1 contract before all three host-provider acceptance gates pass.
+
+> **Host boundary:** vLLM-HUST 0.23 supports
+> `vllm.scheduler.policy.v1`; official vLLM does not. The upstream direction is RFC
+> [#51608](https://github.com/vllm-project/vllm/issues/51608) and draft PR
+> [#51601](https://github.com/vllm-project/vllm/pull/51601), whose target
+> `vllm.scheduler_plugins`/PreemptionScore contract is not frozen. The HUST
+> interface stays minimal, generic, and free of BidKV names; it is not evidence
+> of compatibility with official vLLM.
+
+The exact semantic mapping, draft code/design mismatch, and migration gates
+are tracked in [the upstream scheduler contract gap](docs/upstream-scheduler-contract-gap.md).
+
+```bash
+pip install vllm-hust-ext bidkv
+vllm-hust-ext extension inspect org.vllm-hust.bidkv
+vllm-hust-ext extension validate org.vllm-hust.bidkv
+vllm-hust-ext extension status org.vllm-hust.bidkv
+```
+
+On vLLM-HUST 0.23, Manager converts the generic manifest into a host-native
+startup manifest and selects `org.vllm-hust.bidkv/victim-selector`. On official
+vLLM, status remains `incompatible` or `degraded` and `run` refuses activation.
+Core contract tests, real Qwen3-0.6B KV-pressure victim selection, request
+completion, disable, and next-process built-in rollback pass on server 91.
+Repeating the result from clean release image/wheel artifacts remains an alpha
+release gate.
+
+For a legacy replay that was explicitly enabled, disable the saved intent and
+start a fresh vLLM process to roll back:
+
+```bash
+vllm-hust-ext extension disable org.vllm-hust.bidkv
+```
+
+After the replacement vLLM process is running without BidKV, remove Manager
+state before uninstalling the Python distribution. This prevents a later
+reinstall from restoring stale enabled intent:
+
+```bash
+vllm-hust-ext extension forget org.vllm-hust.bidkv
+pip uninstall bidkv
+```
+
+`forget` does not stop an existing vLLM process; process restart remains owned
+by the vLLM operator.
 
 ### Legacy experiment adapter
 
 Use this path only to reproduce the historical multi-strategy experiments:
 
 ```bash
+pip install ./legacy/vllm-general-plugin
 BIDKV_STRATEGY=bidkv python -m bidkv.experiments.vllm.serve \
     --model meta-llama/Llama-3.1-8B-Instruct --enforce-eager --port 8000
 ```
+
+Do not install `bidkv-vllm-legacy` in a typed Extension Manager serving
+environment.
 
 ## Zero Dependencies
 

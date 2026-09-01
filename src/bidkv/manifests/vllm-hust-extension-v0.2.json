@@ -1,0 +1,59 @@
+{
+  "schema_version": "0.2-experimental",
+  "extension_id": "org.vllm-hust.bidkv",
+  "extension_version": "0.1.1",
+  "kind": "scheduler_policy",
+  "host": {
+    "provider": "vllm",
+    "name": "vllm",
+    "version_range": ">=0.23,<0.24",
+    "api_range": ">=1,<2"
+  },
+  "runtime": {
+    "type": "python",
+    "process_scope": "scheduler",
+    "isolation": "trusted_in_process"
+  },
+  "lifecycle_owner": "vllm",
+  "protocols": [
+    {
+      "name": "vllm.scheduler.policy",
+      "version_range": ">=1,<2"
+    }
+  ],
+  "implementation": [
+    {
+      "type": "python_module",
+      "module": "bidkv.adapters.vllm_hust.selector",
+      "object": "BidkvVictimSelector",
+      "status": "active"
+    }
+  ],
+  "requires_services": [],
+  "components": [
+    {
+      "component_id": "victim-selector",
+      "contracts": [
+        "vllm.scheduler.policy.v1"
+      ],
+      "execution_planes": [
+        "scheduler"
+      ],
+      "isolation": "trusted_in_process",
+      "implementation_ref": "bidkv.adapters.vllm_hust.selector:BidkvVictimSelector",
+      "permissions": []
+    }
+  ],
+  "activation": {
+    "entry_points": [],
+    "environment": {
+      "BIDKV_UTILITY_ENABLE": "1",
+      "BIDKV_UTILITY_STRATEGY": "bidkv"
+    },
+    "additional_config": {
+      "victim_selector_component": "org.vllm-hust.bidkv/victim-selector",
+      "enable_utility_victim_selection": true,
+      "utility_strategy": "bidkv"
+    }
+  }
+}

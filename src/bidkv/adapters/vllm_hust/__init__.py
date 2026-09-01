@@ -1,9 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
-"""vLLM HUST adapter for BidKV victim selector plugin.
+"""BidKV policy implementation for the vLLM-HUST typed scheduler contract.
 
-Provides :class:`BidkvVictimSelector` that implements the
-``VictimSelector`` protocol from ``vllm.v1.core.sched.victim_selector``,
-auto-discovered via the ``vllm.victim_selector`` entry-point group.
+The main distribution registers a static extension manifest rather than the
+private legacy ``vllm.victim_selector`` entry-point group.
 """
 
 from bidkv.adapters.vllm_hust.selector import (

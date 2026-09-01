@@ -24,6 +24,7 @@ import json
 import logging
 import os
 import time
+from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -130,13 +131,11 @@ def log_completion(request_id: str, final_output_tokens: int) -> None:
     global _comp_log_fh
     if _comp_log_fh is None:
         return
-    try:
+    with suppress(OSError):
         _comp_log_fh.write(
             json.dumps({"request_id": request_id, "final_output_tokens": final_output_tokens})
             + "\n"
         )
-    except OSError:
-        pass
 
 
 # ---------------------------------------------------------------------------

@@ -36,6 +36,9 @@ version = {attr = "bidkv._version.__version__"}
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+bidkv = ["manifests/*.json"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"
@@ -65,8 +68,5 @@ select = ["E", "F", "W", "I", "UP", "B", "SIM", "ARG"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
-[project.entry-points."vllm.general_plugins"]
-bidkv = "bidkv.adapters.vllm.plugin:register"
-
-[project.entry-points."vllm.victim_selector"]
-bidkv = "bidkv.adapters.vllm_hust.selector:BidkvVictimSelector"
+[project.entry-points."vllm_hust.extension_bundles"]
+"org.vllm-hust.bidkv" = "bidkv.manifests"
