@@ -174,8 +174,10 @@ vllm-hust-ext extension status org.vllm-hust.bidkv
 On vLLM-HUST 0.23, Manager converts the generic manifest into a host-native
 startup manifest and selects `org.vllm-hust.bidkv/victim-selector`. On official
 vLLM, status remains `incompatible` or `degraded` and `run` refuses activation.
-Core contract tests and real BidKV materialization/trace replay pass on server
-91; online serving restart rollback remains an alpha release gate.
+Core contract tests, real Qwen3-0.6B KV-pressure victim selection, request
+completion, disable, and next-process built-in rollback pass on server 91.
+Repeating the result from clean release image/wheel artifacts remains an alpha
+release gate.
 
 For a legacy replay that was explicitly enabled, disable the saved intent and
 start a fresh vLLM process to roll back:

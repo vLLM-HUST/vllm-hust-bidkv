@@ -159,7 +159,8 @@ vllm-hust-ext extension status org.vllm-hust.bidkv
 在 vLLM-HUST 0.23 环境中，Manager 会把通用 manifest 转成宿主原生启动 manifest，
 并选择 `org.vllm-hust.bidkv/victim-selector`。在官方 vLLM 环境中，Manager 必须报告
 `incompatible` 或 `degraded` 并拒绝激活。91 上的核心契约测试和真实 BidKV
-materialization/轨迹回放已经通过；在线 serving 重启回退仍是 alpha 发布门禁。
+materialization/轨迹回放以及真实 Qwen3-0.6B KV 压力抢占、停用、重启回退已经
+通过；从干净发布镜像和 wheel 重复该结果仍是 alpha 发布门禁。
 
 如果旧回放曾被显式启用，回退时停用保存的意图并启动一个新的 vLLM 进程：
 
