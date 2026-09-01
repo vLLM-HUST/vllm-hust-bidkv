@@ -115,27 +115,19 @@ HF_HUB_OFFLINE=1 python -m bidkv.experiments.sglang.runner \
 
 ## Framework Integration (vLLM)
 
-The historical HUST fork exposed `vllm.victim_selector`. BidKV retains that
-adapter as an importable compatibility module for pinned replay, but the main
-distribution no longer registers the non-upstream entry-point namespace. The
-following launch shape applies only to a pinned legacy fork that already owns
-that contract; it is not valid for a fresh official vLLM fork:
+vLLM-HUST 0.23 exposes the generic typed `vllm.scheduler.policy.v1` host
+contract. BidKV supplies only the policy implementation and does not own
+preemption, KV cleanup, or queue mutation. Official vLLM does not yet support
+this HUST contract.
 
 ```bash
-python -m pip install -e . --no-deps
-
-vllm serve meta-llama/Llama-3.1-8B-Instruct \
-    --enforce-eager \
-    --port 8000 \
-    --additional-config '{
-      "victim_selector_plugin": "bidkv",
-      "enable_utility_victim_selection": true,
-      "utility_strategy": "bidkv",
-      "utility_kv_gate": 0.95
-    }'
+pip install vllm-hust-ext bidkv
+vllm-hust-ext extension enable org.vllm-hust.bidkv
+vllm-hust-ext run -- vllm serve meta-llama/Llama-3.1-8B-Instruct \
+    --enforce-eager --port 8000
 ```
 
-Verify the legacy module without claiming runtime discovery:
+Verify the policy implementation API version:
 
 ```bash
 python - <<'PY'
@@ -144,10 +136,9 @@ print(BidkvVictimSelector.vllm_victim_selector_api_version)
 PY
 ```
 
-Environment variables with the `BIDKV_UTILITY_` prefix belong to the same
-pinned legacy contract. `BIDKV_STRATEGY` is a separate historical experiment
-adapter that monkey-patches the scheduler. Neither path is a supported fresh
-official-vLLM integration.
+`BIDKV_STRATEGY` is a separate historical experiment adapter that monkey-patches
+the scheduler. It is not part of the Manager launch path and is never enabled
+by package installation.
 
 ### vLLM-HUST Extension Manager path
 
@@ -162,13 +153,13 @@ scheduling behavior.
 Manifest 0.2 is not a compatibility promise and must not be published as a
 stable Bundle v1 contract before all three host-provider acceptance gates pass.
 
-> **Host contract warning:** `vllm.victim_selector` is a legacy HUST
-> experimental hook and is absent from the fresh vLLM-HUST 0.23 fork. The
-> upstream direction is RFC
+> **Host boundary:** vLLM-HUST 0.23 supports
+> `vllm.scheduler.policy.v1`; official vLLM does not. The upstream direction is RFC
 > [#51608](https://github.com/vllm-project/vllm/issues/51608) and draft PR
 > [#51601](https://github.com/vllm-project/vllm/pull/51601), whose target
-> `vllm.scheduler_plugins`/PreemptionScore contract is not frozen. Do not add a
-> competing private hook to the new core or claim current 0.23 compatibility.
+> `vllm.scheduler_plugins`/PreemptionScore contract is not frozen. The HUST
+> interface stays minimal, generic, and free of BidKV names; it is not evidence
+> of compatibility with official vLLM.
 
 The exact semantic mapping, draft code/design mismatch, and migration gates
 are tracked in [the upstream scheduler contract gap](docs/upstream-scheduler-contract-gap.md).
@@ -180,12 +171,11 @@ vllm-hust-ext extension validate org.vllm-hust.bidkv
 vllm-hust-ext extension status org.vllm-hust.bidkv
 ```
 
-On a fresh official vLLM installation, status must remain `incompatible` or
-`degraded` and `run` refuses activation. A pinned legacy operator may provide
-explicit host and `vllm.victim_selector` protocol evidence, but this is only a
-replay path. The alpha gate requires migration to the stabilized upstream
-Preemption contract, real scheduler invocation, conflict and failure tests,
-and next-process rollback. Until then, there is no supported enable command.
+On vLLM-HUST 0.23, Manager converts the generic manifest into a host-native
+startup manifest and selects `org.vllm-hust.bidkv/victim-selector`. On official
+vLLM, status remains `incompatible` or `degraded` and `run` refuses activation.
+Core contract tests and real BidKV materialization/trace replay pass on server
+91; online serving restart rollback remains an alpha release gate.
 
 For a legacy replay that was explicitly enabled, disable the saved intent and
 start a fresh vLLM process to roll back:

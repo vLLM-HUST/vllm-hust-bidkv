@@ -67,7 +67,7 @@ def test_experimental_extension_manifest_matches_native_selector() -> None:
     assert manifest["host"] == {
         "provider": "vllm",
         "name": "vllm",
-        "version_range": ">=0.18,<0.20",
+        "version_range": ">=0.23,<0.24",
         "api_range": ">=1,<2",
     }
     assert manifest["runtime"]["process_scope"] == "scheduler"
@@ -78,7 +78,7 @@ def test_experimental_extension_manifest_matches_native_selector() -> None:
             "type": "python_module",
             "module": "bidkv.adapters.vllm_hust.selector",
             "object": "BidkvVictimSelector",
-            "status": "legacy_unregistered",
+            "status": "active",
         }
     ]
     assert manifest["components"] == [
@@ -98,7 +98,7 @@ def test_experimental_extension_manifest_matches_native_selector() -> None:
             "BIDKV_UTILITY_STRATEGY": "bidkv",
         },
         "additional_config": {
-            "victim_selector_plugin": "bidkv",
+            "victim_selector_component": "org.vllm-hust.bidkv/victim-selector",
             "enable_utility_victim_selection": True,
             "utility_strategy": "bidkv",
         },
@@ -119,7 +119,7 @@ def test_upstream_contract_gap_keeps_draft_and_release_boundaries_explicit() -> 
     assert "f8b7db61e446911e0d62fcb8220f863d6098c471" in gap
     assert "minimum BidKV serving contract" in gap
     assert "does not register the private" in gap
-    assert "No compatibility range may include the fresh official fork" in gap
+    assert "No compatibility range may include official vLLM" in gap
 
 
 def test_legacy_and_native_environment_switches_are_mutually_exclusive(

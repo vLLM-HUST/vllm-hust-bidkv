@@ -105,25 +105,18 @@ HF_HUB_OFFLINE=1 python -m bidkv.experiments.sglang.runner \
 
 ## 框架集成（vLLM）
 
-历史 HUST fork 曾提供 `vllm.victim_selector`。BidKV 仍保留可导入的兼容模块，
-用于固定旧版本的契约回放，但主发行包不再注册这个非上游 entry-point 命名空间。
-下面的启动形态只适用于已经拥有该契约的固定旧 fork，不能用于新的官方 vLLM fork：
+当前 vLLM-HUST 0.23 提供通用 typed `vllm.scheduler.policy.v1` 宿主契约；
+BidKV 只提供策略实现，不修改 scheduler 的抢占、KV 清理和重排逻辑。官方 vLLM
+尚不支持此 HUST 契约。
 
 ```bash
-python -m pip install -e . --no-deps
-
-vllm serve meta-llama/Llama-3.1-8B-Instruct \
-    --enforce-eager \
-    --port 8000 \
-    --additional-config '{
-      "victim_selector_plugin": "bidkv",
-      "enable_utility_victim_selection": true,
-      "utility_strategy": "bidkv",
-      "utility_kv_gate": 0.95
-    }'
+pip install vllm-hust-ext bidkv
+vllm-hust-ext extension enable org.vllm-hust.bidkv
+vllm-hust-ext run -- vllm serve meta-llama/Llama-3.1-8B-Instruct \
+    --enforce-eager --port 8000
 ```
 
-可验证旧适配器模块，但不能把这当成运行时已经支持自动发现：
+可验证策略实现的 API 版本：
 
 ```bash
 python - <<'PY'
@@ -132,8 +125,8 @@ print(BidkvVictimSelector.vllm_victim_selector_api_version)
 PY
 ```
 
-`BIDKV_UTILITY_` 前缀变量同样只属于这个固定旧契约。`BIDKV_STRATEGY` 是另一条
-会 monkey patch Scheduler 的历史实验路径；两者都不是对新官方 vLLM 的支持。
+`BIDKV_STRATEGY` 是会 monkey patch Scheduler 的历史实验路径，不属于新的 Manager
+启动链；安装包不会默认启用它。
 
 ### vLLM-HUST Extension Manager 路径
 
@@ -146,12 +139,12 @@ import BidKV，也不会启用调度行为。
 Manifest 0.2 不构成兼容性承诺；三类 Host Provider 验收全部通过前，不能把它
 作为稳定 Bundle v1 契约发布。
 
-> **宿主契约警告：** `vllm.victim_selector` 是旧 HUST 实验 hook，新 fork 的
-> vLLM-HUST 0.23 并不包含它。上游方向是 RFC
+> **宿主边界：** vLLM-HUST 0.23 支持 `vllm.scheduler.policy.v1`；官方 vLLM
+> 尚不支持。上游方向是 RFC
 > [#51608](https://github.com/vllm-project/vllm/issues/51608) 和 draft PR
 > [#51601](https://github.com/vllm-project/vllm/pull/51601)，其目标
-> `vllm.scheduler_plugins`/PreemptionScore 契约尚未冻结。不要向新核心再加入一套
-> 竞争的私有 hook，也不能宣称当前已兼容 0.23。
+> `vllm.scheduler_plugins`/PreemptionScore 契约尚未冻结。HUST 的接口保持最小、
+> 通用且不包含 BidKV 名称；不能据此宣称兼容官方 vLLM。
 
 具体的语义映射、draft 代码与设计文档差异以及迁移门禁见
 [上游 scheduler 契约差距](docs/upstream-scheduler-contract-gap.md)。
@@ -163,11 +156,10 @@ vllm-hust-ext extension validate org.vllm-hust.bidkv
 vllm-hust-ext extension status org.vllm-hust.bidkv
 ```
 
-在新的官方 vLLM 环境中，状态必须保持 `incompatible` 或 `degraded`，Manager 的
-`run` 会拒绝激活。固定旧 fork 的操作者可以显式提供宿主版本和
-`vllm.victim_selector` 协议证据，但这只用于回放。alpha 门禁要求先迁移到稳定后的
-上游 Preemption 契约，并完成真实 scheduler 调用、冲突/失败和下次进程回退测试；
-在此之前没有受支持的启用命令。
+在 vLLM-HUST 0.23 环境中，Manager 会把通用 manifest 转成宿主原生启动 manifest，
+并选择 `org.vllm-hust.bidkv/victim-selector`。在官方 vLLM 环境中，Manager 必须报告
+`incompatible` 或 `degraded` 并拒绝激活。91 上的核心契约测试和真实 BidKV
+materialization/轨迹回放已经通过；在线 serving 重启回退仍是 alpha 发布门禁。
 
 如果旧回放曾被显式启用，回退时停用保存的意图并启动一个新的 vLLM 进程：
 

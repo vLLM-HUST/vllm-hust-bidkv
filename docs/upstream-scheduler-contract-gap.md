@@ -1,8 +1,8 @@
 # BidKV upstream scheduler contract gap
 
-Status: blocked on an upstream contract, not blocked on the BidKV scoring
-algorithm. This document is evidence for the release freeze; it is not an API
-promise.
+Status: vLLM-HUST 0.23 support is implemented through the HUST-owned typed
+`vllm.scheduler.policy.v1` contract. Official-vLLM support remains blocked on
+an upstream contract. This document is not an upstream API promise.
 
 ## Pinned upstream evidence
 
@@ -44,15 +44,16 @@ hooks are experiment code, not part of the new adapter.
 1. Installing `bidkv` remains inert.
 2. The main distribution does not register the private
    `vllm.victim_selector` group.
-3. The legacy selector remains import-only for a pinned archived fork.
+3. vLLM-HUST uses the typed component; the legacy selector remains importable
+   only for archived experiment replay.
 4. A future adapter may register `vllm.scheduler_plugins` only after upstream
    actually implements and documents out-of-tree discovery.
 5. Extension Manager must require explicit host and protocol evidence and fail
    before launch when either is missing or incompatible.
-6. No compatibility range may include the fresh official fork until a real
+6. No compatibility range may include official vLLM until a real
    EngineCore loads the adapter and calls it.
 
-## Acceptance gate for replacing the legacy manifest
+## Acceptance gate for official-vLLM support
 
 - Pin a reviewed upstream commit whose code and design agree on naming,
   descriptor, data ownership, composition, and error behavior.
@@ -68,6 +69,6 @@ hooks are experiment code, not part of the new adapter.
 - Disable BidKV, start a new vLLM process, and prove the built-in policy is
   restored without stale Manager intent.
 
-Only after these gates pass should the manifest replace
-`vllm.victim_selector` with the stabilized upstream protocol and change the
-implementation carrier from `legacy_unregistered` to an active carrier.
+The HUST manifest already uses `vllm.scheduler.policy.v1` with an active
+carrier. Only after these gates pass may a separate official-vLLM compatibility
+range and upstream protocol be declared.

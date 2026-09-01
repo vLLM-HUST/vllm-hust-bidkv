@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-from importlib.metadata import entry_points
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -18,12 +17,13 @@ TRACE_PATH = REPO_ROOT / "tests" / "fixtures" / "vllm_hust_scheduler_trace_v1.js
 
 def _integration_imports():
     try:
-        from bidkv.adapters.vllm_hust.selector import BidkvVictimSelector
         from vllm.v1.core.sched.victim_selector import (
             NoOpVictimSelector,
             VictimSelectorMaterializationError,
             get_victim_selector,
         )
+
+        from bidkv.adapters.vllm_hust.selector import BidkvVictimSelector
     except (ImportError, OSError) as exc:
         if REQUIRE_INTEGRATION:
             pytest.fail(f"vLLM-HUST integration environment is incomplete: {exc}")
@@ -33,6 +33,47 @@ def _integration_imports():
         NoOpVictimSelector,
         VictimSelectorMaterializationError,
         get_victim_selector,
+    )
+
+
+def _install_typed_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
+    try:
+        from vllm.plugins.contracts import (
+            ComponentIsolation,
+            DomainContract,
+            ExecutionPlane,
+            ExtensionBundleDescriptor,
+            ExtensionComponentDescriptor,
+        )
+        from vllm.plugins.snapshot import ExtensionStartupSnapshot
+        from vllm.plugins.startup import ExtensionStartupResolution
+    except (ImportError, OSError) as exc:
+        if REQUIRE_INTEGRATION:
+            pytest.fail(f"typed vLLM-HUST host contract is unavailable: {exc}")
+        pytest.skip(f"typed vLLM-HUST integration environment only: {exc}")
+    bundle = ExtensionBundleDescriptor(
+        bundle_id="org.vllm-hust.bidkv",
+        bundle_version="0.1.1",
+        host_api_range=">=1,<2",
+        components=(
+            ExtensionComponentDescriptor(
+                component_id="victim-selector",
+                contracts=(DomainContract.SCHEDULER_POLICY_V1,),
+                execution_planes=(ExecutionPlane.SCHEDULER,),
+                isolation=ComponentIsolation.TRUSTED_IN_PROCESS,
+                implementation_ref=(
+                    "bidkv.adapters.vllm_hust.selector:BidkvVictimSelector"
+                ),
+            ),
+        ),
+    )
+    resolution = ExtensionStartupResolution(
+        snapshot=ExtensionStartupSnapshot.build((bundle,)),
+        disabled_bundle_ids=(),
+    )
+    monkeypatch.setattr(
+        "vllm.plugins.startup.get_configured_extension_startup",
+        lambda: resolution,
     )
 
 
@@ -63,20 +104,17 @@ def _replay(selector, trace: dict[str, Any]) -> list[str]:
     return choices
 
 
-def test_installed_native_entry_point_loads_through_vllm_hust() -> None:
+def test_installed_typed_component_loads_through_vllm_hust(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     selector_cls, _, _, get_selector = _integration_imports()
-    matches = [
-        ep for ep in entry_points(group="vllm.victim_selector") if ep.name == "bidkv"
-    ]
-    if not matches and not REQUIRE_INTEGRATION:
-        pytest.skip("BidKV distribution metadata is not installed")
-
-    assert len(matches) == 1
-    assert matches[0].load() is selector_cls
+    _install_typed_resolution(monkeypatch)
     selected = get_selector(
         SimpleNamespace(
             additional_config={
-                "victim_selector_plugin": "bidkv",
+                "victim_selector_component": (
+                    "org.vllm-hust.bidkv/victim-selector"
+                ),
                 "enable_utility_victim_selection": True,
             }
         )
@@ -84,10 +122,16 @@ def test_installed_native_entry_point_loads_through_vllm_hust() -> None:
     assert isinstance(selected, selector_cls)
 
 
-def test_native_selector_replays_recorded_trace() -> None:
+def test_native_selector_replays_recorded_trace(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     selector_cls, _, _, get_selector = _integration_imports()
+    _install_typed_resolution(monkeypatch)
     trace = json.loads(TRACE_PATH.read_text(encoding="utf-8"))
-    config = {**trace["additional_config"], "victim_selector_plugin": "bidkv"}
+    config = {
+        **trace["additional_config"],
+        "victim_selector_component": "org.vllm-hust.bidkv/victim-selector",
+    }
 
     selector = get_selector(SimpleNamespace(additional_config=config))
     replay_selector = get_selector(SimpleNamespace(additional_config=config))
@@ -96,10 +140,13 @@ def test_native_selector_replays_recorded_trace() -> None:
     assert _replay(selector, trace) == _replay(replay_selector, trace)
 
 
-def test_invalid_native_config_preserves_root_cause() -> None:
+def test_invalid_native_config_preserves_root_cause(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _, _, materialization_error, get_selector = _integration_imports()
+    _install_typed_resolution(monkeypatch)
     invalid = {
-        "victim_selector_plugin": "bidkv",
+        "victim_selector_component": "org.vllm-hust.bidkv/victim-selector",
         "enable_utility_victim_selection": True,
         "utility_completion_weight": -1,
     }
