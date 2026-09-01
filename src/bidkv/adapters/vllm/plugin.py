@@ -1,8 +1,9 @@
 """Legacy vLLM general plugin for experiment-only scheduler injection.
 
-Registered as a ``vllm.general_plugins`` entry point so that it executes
-inside **every** vLLM process, including the EngineCore subprocess that is
-spawned via ``multiprocessing.spawn``.
+The main ``bidkv`` wheel deliberately does not register this module. Archived
+experiment replay requires the separate ``bidkv-vllm-legacy`` distribution,
+whose ``vllm.general_plugins`` entry point executes inside every vLLM process,
+including the EngineCore subprocess spawned via ``multiprocessing.spawn``.
 
 Flow
 ----
@@ -27,7 +28,7 @@ _PATCHED = False  # guard against double-patching
 
 
 def register() -> None:
-    """Entry point called by ``vllm.plugins.load_general_plugins()``."""
+    """Legacy entry point supplied only by ``bidkv-vllm-legacy``."""
     global _PATCHED
     if _PATCHED:
         return

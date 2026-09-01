@@ -68,8 +68,5 @@ select = ["E", "F", "W", "I", "UP", "B", "SIM", "ARG"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
-[project.entry-points."vllm.general_plugins"]
-bidkv = "bidkv.adapters.vllm.plugin:register"
-
 [project.entry-points."vllm_hust.extension_bundles"]
 "org.vllm-hust.bidkv" = "bidkv.manifests"

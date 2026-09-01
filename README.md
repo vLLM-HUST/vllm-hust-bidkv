@@ -136,9 +136,10 @@ print(BidkvVictimSelector.vllm_victim_selector_api_version)
 PY
 ```
 
-`BIDKV_STRATEGY` is a separate historical experiment adapter that monkey-patches
-the scheduler. It is not part of the Manager launch path and is never enabled
-by package installation.
+`BIDKV_STRATEGY` belongs to a separate historical experiment adapter that
+monkey-patches the scheduler. The main wheel does not register
+`vllm.general_plugins`; installing `bidkv` therefore cannot auto-import the
+legacy hook.
 
 ### vLLM-HUST Extension Manager path
 
@@ -203,9 +204,13 @@ by the vLLM operator.
 Use this path only to reproduce the historical multi-strategy experiments:
 
 ```bash
+pip install ./legacy/vllm-general-plugin
 BIDKV_STRATEGY=bidkv python -m bidkv.experiments.vllm.serve \
     --model meta-llama/Llama-3.1-8B-Instruct --enforce-eager --port 8000
 ```
+
+Do not install `bidkv-vllm-legacy` in a typed Extension Manager serving
+environment.
 
 ## Zero Dependencies
 

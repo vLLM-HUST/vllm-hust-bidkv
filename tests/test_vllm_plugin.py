@@ -1,4 +1,4 @@
-"""Tests for the legacy vLLM general-plugin activation boundary."""
+"""Tests for typed packaging and the separately installed legacy adapter."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 from bidkv.adapters.vllm import plugin
+from bidkv.experiments.vllm import serve
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -43,18 +44,38 @@ def test_explicit_legacy_strategy_enables_scheduler_hook(
     assert plugin._PATCHED is True
 
 
-def test_only_upstream_general_plugin_and_project_manifest_are_registered() -> None:
+def test_main_wheel_registers_only_the_typed_project_manifest() -> None:
     config = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
-    assert '[project.entry-points."vllm.general_plugins"]' in config
-    assert 'bidkv = "bidkv.adapters.vllm.plugin:register"' in config
+    assert '[project.entry-points."vllm.general_plugins"]' not in config
+    assert 'bidkv = "bidkv.adapters.vllm.plugin:register"' not in config
     assert '[project.entry-points."vllm.victim_selector"]' not in config
     assert '[project.entry-points."vllm_hust.extension_bundles"]' in config
     assert '"org.vllm-hust.bidkv" = "bidkv.manifests"' in config
 
+    legacy_config = (
+        REPO_ROOT / "legacy" / "vllm-general-plugin" / "pyproject.toml"
+    ).read_text(encoding="utf-8")
+    assert '[project.entry-points."vllm.general_plugins"]' in legacy_config
+    assert 'bidkv = "bidkv.adapters.vllm.plugin:register"' in legacy_config
+
     from bidkv.adapters.vllm_hust.selector import BidkvVictimSelector
 
     assert BidkvVictimSelector.vllm_victim_selector_api_version == 1
+
+
+def test_legacy_experiment_fails_closed_without_separate_distribution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class EmptyEntryPoints(tuple):
+        def select(self, **_kwargs: object) -> tuple[object, ...]:
+            return ()
+
+    monkeypatch.setattr(serve, "entry_points", EmptyEntryPoints)
+
+    assert serve._legacy_entry_point_installed() is False
+    with pytest.raises(RuntimeError, match="bidkv-vllm-legacy"):
+        serve.main()
 
 
 def test_experimental_extension_manifest_matches_native_selector() -> None:

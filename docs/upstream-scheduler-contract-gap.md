@@ -44,8 +44,9 @@ hooks are experiment code, not part of the new adapter.
 1. Installing `bidkv` remains inert.
 2. The main distribution does not register the private
    `vllm.victim_selector` group.
-3. vLLM-HUST uses the typed component; the legacy selector remains importable
-   only for archived experiment replay.
+3. vLLM-HUST uses the typed component. The main wheel has no
+   `vllm.general_plugins` entry point; archived replay requires the separate
+   `bidkv-vllm-legacy` distribution.
 4. A future adapter may register `vllm.scheduler_plugins` only after upstream
    actually implements and documents out-of-tree discovery.
 5. Extension Manager must require explicit host and protocol evidence and fail
