@@ -556,8 +556,14 @@ def _plot_eviction_coverage(
                      f"{val:.0f}", ha="center", va="bottom", fontsize=8)
     for bar, val in zip(bars2, tokens_freed_k, strict=False):
         if val > 0:
-            ax2.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + max(tokens_freed_k) * 0.01,
-                     f"{val:.0f}k", ha="center", va="bottom", fontsize=8)
+            ax2.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + max(tokens_freed_k) * 0.01,
+                f"{val:.0f}k",
+                ha="center",
+                va="bottom",
+                fontsize=8,
+            )
 
     # 合并图例（ax1 + ax2 的 handle）
     h1, l1 = ax1.get_legend_handles_labels()

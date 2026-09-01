@@ -21,7 +21,6 @@ from bidkv.experiments.sglang.config import (
     ALL_STRATEGIES,
     ALL_WORKLOADS,
     DEFAULT_REQUEST_RATES,
-    EXTENDED_STRATEGIES,
     STRATEGY_BIDKV,
     STRATEGY_SGLANG_DEFAULT,
     SGLangExperimentConfig,
