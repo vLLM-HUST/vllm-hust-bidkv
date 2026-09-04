@@ -287,6 +287,7 @@ class BidkvPreemptionPolicy:
         self._default_strategy_hits = 0
         self._liveness_fallback_hits = 0
         self._liveness_epochs = 0
+        self._liveness_throttle_hits = 0
         self._cascade_guard_hits = 0
         self._liveness_preemption_offsets: dict[str, int] = {}
         self._consecutive_preemption_events = 0
@@ -431,6 +432,7 @@ class BidkvPreemptionPolicy:
             "default_strategy_hits": self._default_strategy_hits,
             "liveness_fallback_hits": self._liveness_fallback_hits,
             "liveness_epochs": self._liveness_epochs,
+            "liveness_throttle_hits": self._liveness_throttle_hits,
             "cascade_guard_hits": self._cascade_guard_hits,
         }
 
@@ -561,14 +563,14 @@ class BidkvPreemptionPolicy:
             )
             for candidate in ranked_candidates
         }
-        if (
-            liveness_threshold > 0
-            and len(ranked_candidates) > 1
-            and all(
-                relative_preemptions[candidate.request_id] >= liveness_threshold
+        eligible_candidates = ranked_candidates
+        if liveness_threshold > 0 and len(ranked_candidates) > 1:
+            eligible_candidates = [
+                candidate
                 for candidate in ranked_candidates
-            )
-        ):
+                if relative_preemptions[candidate.request_id] < liveness_threshold
+            ]
+        if liveness_threshold > 0 and len(ranked_candidates) > 1 and not eligible_candidates:
             # Bound utility rotation without permanently disabling utility.
             # This is an epoch barrier: one self/default decision lets the
             # current scheduling pass stop cascading, then offsets advance so
@@ -606,12 +608,30 @@ class BidkvPreemptionPolicy:
             )
             return victim
 
-        top = ranked_candidates[0]
+        if len(eligible_candidates) < len(ranked_candidates):
+            # A high-value request must not remain the victim forever merely
+            # because the other candidates have not yet been preempted. Cap
+            # every request independently within the current epoch and rank
+            # only candidates that still have budget. Once every candidate
+            # exhausts its budget, the barrier above advances the epoch.
+            self._liveness_throttle_hits += 1
+            logging.getLogger("vllm").info(
+                "[BidKV] LIVENESS_THROTTLE | eligible=%d | throttled=%d | "
+                "threshold=%d | epoch=%d | kv_util=%.2f | running=%d",
+                len(eligible_candidates),
+                len(ranked_candidates) - len(eligible_candidates),
+                liveness_threshold,
+                self._liveness_epochs,
+                kv_utilization or 0.0,
+                len(running),
+            )
+
+        top = eligible_candidates[0]
         cascade_guard_used = False
         requester = next(
             (
                 candidate
-                for candidate in ranked_candidates
+                for candidate in eligible_candidates
                 if candidate.request_id == requesting_request_id
             ),
             None,

@@ -226,6 +226,47 @@ def test_requester_guard_avoids_marginal_multi_victim_cascade() -> None:
     assert selector.export_metrics()["cascade_guard_hits"] == 1
 
 
+def test_liveness_throttles_one_repeated_high_value_victim() -> None:
+    selector = BidkvVictimSelector(
+        BidkvSelectorConfig(
+            enable_utility_victim_selection=True,
+            utility_liveness_preemptions=2,
+            utility_cascade_gain_ratio=1.25,
+        )
+    )
+    counts = {"large": 0, "medium": 0, "small": 0}
+    selected = []
+    for step in range(3):
+        candidates = (
+            _make_request(
+                "large", num_computed_tokens=20_000, num_preemptions=counts["large"]
+            ),
+            _make_request(
+                "medium", num_computed_tokens=4_000, num_preemptions=counts["medium"]
+            ),
+            _make_request(
+                "small", num_computed_tokens=1_000, num_preemptions=counts["small"]
+            ),
+        )
+        victim = selector.select_victim(
+            SimpleNamespace(
+                candidates=candidates,
+                scheduling_policy="fcfs",
+                requesting_request_id="large",
+                kv_cache_usage=1.0,
+                now=float(step),
+            )
+        )
+        counts[victim] += 1
+        selected.append(victim)
+
+    assert selected[:2] == ["large", "large"]
+    assert selected[2] == "medium"
+    metrics = selector.export_metrics()
+    assert metrics["liveness_throttle_hits"] == 1
+    assert metrics["liveness_epochs"] == 0
+
+
 def test_requester_guard_keeps_material_utility_gain() -> None:
     selector = BidkvVictimSelector(
         BidkvSelectorConfig(
@@ -424,7 +465,7 @@ class TestBidkvVictimSelectorRuntime:
         assert metrics["default_strategy_hits"] == 1
         assert selector._last_decision["decision_reason"] == "liveness_fallback"
 
-    def test_liveness_fallback_waits_until_every_candidate_repeated(self):
+    def test_liveness_throttle_selects_candidate_with_epoch_budget(self):
         from vllm.v1.core.sched.request_queue import SchedulingPolicy
 
         selector = BidkvVictimSelector.from_vllm_config(
@@ -443,8 +484,9 @@ class TestBidkvVictimSelectorRuntime:
 
         victim = selector.pick_victim(running, SchedulingPolicy.FCFS, kv_utilization=1.0)
 
-        assert victim.request_id == "r1"
+        assert victim.request_id == "r2"
         assert selector.export_metrics()["liveness_fallback_hits"] == 0
+        assert selector.export_metrics()["liveness_throttle_hits"] == 1
 
     def test_kill_switch_falls_back_to_default(self):
         from vllm.v1.core.sched.request_queue import SchedulingPolicy
