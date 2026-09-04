@@ -34,8 +34,8 @@
         "model": "Qwen3.8-27B",
         "tensor_parallel_size": 4,
         "execution_mode": "graph",
-        "status": "compatible",
-        "evidence": "docs/evidence/sage-mate-20260904-tp4-graph.md"
+        "status": "incompatible",
+        "evidence": "docs/evidence/sage-mate-20260905-current-main-tp4-graph.md"
       }
     ]
   }

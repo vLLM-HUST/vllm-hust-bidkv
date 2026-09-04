@@ -176,13 +176,14 @@ BidKV 还包含前向进展保护：当所有可运行请求都已至少被抢�
 | enabled | 已保存“下次获批启动启用 BidKV”的运维意图。 |
 | runtime effective | 受控在线运行日志确认精确策略类，且调用计数非零。 |
 
-固定源码上的 CPU 契约与真实 scheduler 路径单测已通过。修复后的同一制品已完成
-Qwen3.8-27B、昇腾 TP4 graph 的真实压力验证：四路 12,517-token 输入加 2,048-token
-输出请求均返回 HTTP 200；目标策略调用 187 次且失败为 0，其中 6 次使用 BidKV
-效用选择，181 次按设计进入前进保护。取消/恢复、输出检查、紧急停用与下一进程基线
-回滚均通过。因此该精确候选通道可标记为 **compatible**；结论不能外推到其他模型、
-拓扑、制品或宿主 commit。详见
-[资格记录](docs/evidence/sage-mate-20260904-tp4-graph.md)。
+历史固定通道通过了功能资格验证；但在当前 vLLM-HUST 与
+vLLM-Ascend-HUST main 上重新执行真实硬件验收后，性能/正确性门槛没有通过，因此
+Qwen3.8-27B TP4 graph 当前标记为 **incompatible**。策略确实 runtime effective
+（6 次效用决策、158 次前进保护回退），取消/恢复通过，短确定性输出也与基线一致；
+但实际抢占为 164 次，高于内置策略的 161 次，输出吞吐下降 2.35%，P95 TTFT
+上升 2.15%，且强制 2,048-token 压力输出的哈希与基线不一致。详见
+[当前 main 资格记录](docs/evidence/sage-mate-20260905-current-main-tp4-graph.md)与
+[历史资格记录](docs/evidence/sage-mate-20260904-tp4-graph.md)。
 
 如果旧回放曾被显式启用，回退时停用保存的意图并启动一个新的 vLLM 进程：
 

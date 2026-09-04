@@ -196,16 +196,17 @@ Lifecycle labels are deliberately separate:
 | enabled | Saved operator intent requests BidKV on the next approved launch. |
 | runtime effective | EngineCore logs the exact class and non-zero policy-call counters from a controlled online run. |
 
-CPU contract and scheduler-path tests pass on the pinned source. The repaired
-revision then completed a real Qwen3.8-27B Ascend TP4 graph-mode pressure run:
-four concurrent requests with 12,517 input tokens and 2,048 requested output
-tokens all returned HTTP 200. The selected policy was called 187 times with
-zero failures; 6 decisions used BidKV utility selection and 181 deliberately
-used the liveness fallback. Cancellation/recovery, output checks, emergency
-disable, and next-process baseline rollback passed. This exact candidate lane
-is therefore **compatible**. The verdict does not transfer to another model,
-topology, artifact or host commit. See the
-[qualification record](docs/evidence/sage-mate-20260904-tp4-graph.md).
+The historical pinned lane passed its functional qualification. A fresh run on
+the current vLLM-HUST and vLLM-Ascend-HUST main commits did not pass the
+performance/correctness acceptance gate, so Qwen3.8-27B TP4 graph is currently
+marked **incompatible**. The policy was runtime effective (6 utility decisions
+and 158 liveness fallbacks), cancellation/recovery passed, and short
+deterministic outputs matched. However, it produced 164 preemptions versus 161
+for the built-in policy, reduced output throughput by 2.35%, increased P95 TTFT
+by 2.15%, and the forced 2,048-token pressure outputs did not match the baseline
+hashes. See the
+[current-main qualification record](docs/evidence/sage-mate-20260905-current-main-tp4-graph.md)
+and the [historical qualification](docs/evidence/sage-mate-20260904-tp4-graph.md).
 
 For a legacy replay that was explicitly enabled, disable the saved intent and
 start a fresh vLLM process to roll back:
