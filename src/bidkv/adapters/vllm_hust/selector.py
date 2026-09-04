@@ -16,7 +16,7 @@ import logging
 import math
 import os
 import time
-from collections import OrderedDict, defaultdict, deque
+from collections import defaultdict, deque
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol
@@ -36,7 +36,6 @@ class _Candidate(Protocol):
 
 
 _DEFAULT_MAX_TOKENS = 1024
-_LIVENESS_STATE_LIMIT = 4096
 
 # ---------------------------------------------------------------------------
 # Environment variables (plugin-owned, BIDKV_UTILITY_ prefix)
@@ -288,9 +287,8 @@ class BidkvPreemptionPolicy:
         self._default_strategy_hits = 0
         self._liveness_fallback_hits = 0
         self._liveness_epochs = 0
-        self._liveness_throttle_hits = 0
         self._cascade_guard_hits = 0
-        self._liveness_progress: OrderedDict[str, tuple[int, int]] = OrderedDict()
+        self._liveness_preemption_offsets: dict[str, int] = {}
         self._consecutive_preemption_events = 0
         self._consecutive_preemption_checks = 0
         self._last_preempted_request_id: str | None = None
@@ -433,7 +431,6 @@ class BidkvPreemptionPolicy:
             "default_strategy_hits": self._default_strategy_hits,
             "liveness_fallback_hits": self._liveness_fallback_hits,
             "liveness_epochs": self._liveness_epochs,
-            "liveness_throttle_hits": self._liveness_throttle_hits,
             "cascade_guard_hits": self._cascade_guard_hits,
         }
 
@@ -556,35 +553,43 @@ class BidkvPreemptionPolicy:
 
         ranked_candidates, req_map = self._rank_candidates(running)
         liveness_threshold = self.config.utility_liveness_preemptions
-        eligible_candidates = ranked_candidates
-        if liveness_threshold > 0 and len(ranked_candidates) > 1:
-            eligible_candidates = [
-                candidate
+        relative_preemptions = {
+            candidate.request_id: max(
+                0,
+                candidate.num_preemptions
+                - self._liveness_preemption_offsets.get(candidate.request_id, 0),
+            )
+            for candidate in ranked_candidates
+        }
+        if (
+            liveness_threshold > 0
+            and len(ranked_candidates) > 1
+            and all(
+                relative_preemptions[candidate.request_id] >= liveness_threshold
                 for candidate in ranked_candidates
-                if self._liveness_stall_count(candidate, req_map)
-                < liveness_threshold
-            ]
-        if liveness_threshold > 0 and len(ranked_candidates) > 1 and not eligible_candidates:
+            )
+        ):
             # Bound utility rotation without permanently disabling utility.
             # This is an epoch barrier: one self/default decision lets the
-            # current scheduling pass stop cascading, then per-request stall
-            # counters reset so subsequent pressure decisions return to
-            # utility ranking. A new barrier is possible only after every
-            # still-runnable request has again stopped making output progress.
+            # current scheduling pass stop cascading, then offsets advance so
+            # subsequent pressure decisions return to utility ranking. A new
+            # barrier is possible only after every still-runnable request has
+            # paid another bounded number of preemptions.
             victim = req_map.get(requesting_request_id, default_victim)
             self._liveness_fallback_hits += 1
             self._liveness_epochs += 1
             for candidate in ranked_candidates:
-                state = self._liveness_progress.get(candidate.request_id)
-                if state is not None:
-                    self._liveness_progress[candidate.request_id] = (state[0], 0)
-            self._record_liveness_selection(victim)
+                self._liveness_preemption_offsets[candidate.request_id] = (
+                    candidate.num_preemptions
+                )
             logging.getLogger("vllm").warning(
                 "[BidKV] LIVENESS_FALLBACK | victim=%s (progress barrier) | "
-                "threshold=%d | epoch=%d | kv_util=%.2f | running=%d",
+                "threshold=%d | epoch=%d | min_relative_preemptions=%d | "
+                "kv_util=%.2f | running=%d",
                 victim.request_id,
                 liveness_threshold,
                 self._liveness_epochs,
+                min(relative_preemptions.values()),
                 kv_utilization or 0.0,
                 len(running),
             )
@@ -601,28 +606,12 @@ class BidkvPreemptionPolicy:
             )
             return victim
 
-        if len(eligible_candidates) < len(ranked_candidates):
-            # A high-value request must not remain the victim forever when its
-            # output has stopped advancing. Throttle only stalled selections;
-            # ordinary self-preemption that still delivers output is allowed.
-            self._liveness_throttle_hits += 1
-            logging.getLogger("vllm").info(
-                "[BidKV] LIVENESS_THROTTLE | eligible=%d | throttled=%d | "
-                "threshold=%d | epoch=%d | kv_util=%.2f | running=%d",
-                len(eligible_candidates),
-                len(ranked_candidates) - len(eligible_candidates),
-                liveness_threshold,
-                self._liveness_epochs,
-                kv_utilization or 0.0,
-                len(running),
-            )
-
-        top = eligible_candidates[0]
+        top = ranked_candidates[0]
         cascade_guard_used = False
         requester = next(
             (
                 candidate
-                for candidate in eligible_candidates
+                for candidate in ranked_candidates
                 if candidate.request_id == requesting_request_id
             ),
             None,
@@ -641,7 +630,6 @@ class BidkvPreemptionPolicy:
             self._cascade_guard_hits += 1
             cascade_guard_used = True
         victim = req_map[top.request_id]
-        self._record_liveness_selection(victim)
         self._last_utility_pick_ts = now
         logging.getLogger("vllm").info(
             "[BidKV] UTILITY_ACTIVE | victim=%s | U=%.4f | r=%d tok | "
@@ -667,31 +655,6 @@ class BidkvPreemptionPolicy:
             running_size=len(running),
         )
         return victim
-
-    def _liveness_stall_count(
-        self,
-        candidate: UtilityCandidateScore,
-        req_map: dict[str, _Candidate],
-    ) -> int:
-        state = self._liveness_progress.get(candidate.request_id)
-        if state is None:
-            return 0
-        last_output_tokens, stall_count = state
-        current_output_tokens = self._output_tokens(req_map[candidate.request_id])
-        if current_output_tokens > last_output_tokens:
-            return 0
-        return stall_count
-
-    def _record_liveness_selection(self, victim: _Candidate) -> None:
-        request_id = victim.request_id
-        current_output_tokens = self._output_tokens(victim)
-        previous = self._liveness_progress.pop(request_id, None)
-        stall_count = 0
-        if previous is not None and current_output_tokens <= previous[0]:
-            stall_count = previous[1] + 1
-        self._liveness_progress[request_id] = (current_output_tokens, stall_count)
-        while len(self._liveness_progress) > _LIVENESS_STATE_LIMIT:
-            self._liveness_progress.popitem(last=False)
 
     # -- Internal helpers -------------------------------------------------
 

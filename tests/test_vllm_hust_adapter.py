@@ -151,9 +151,6 @@ def test_liveness_fallback_without_vllm_runtime() -> None:
         _make_request("r2", num_computed_tokens=200, num_preemptions=4),
         _make_request("r3", num_computed_tokens=100, num_preemptions=3),
     ]
-    selector._liveness_progress.update(
-        {"r1": (0, 2), "r2": (0, 2), "r3": (0, 2)}
-    )
 
     victim = selector.pick_victim(running, "fcfs", kv_utilization=1.0)
 
@@ -181,9 +178,6 @@ def test_liveness_guard_is_an_epoch_not_a_permanent_fallback() -> None:
         kv_cache_usage=1.0,
         now=1.0,
     )
-    selector._liveness_progress.update(
-        {"r1": (0, 2), "r2": (0, 2), "r3": (0, 2)}
-    )
     assert selector.select_victim(context) == "r2"
     assert selector.export_metrics()["liveness_fallback_hits"] == 1
 
@@ -199,9 +193,6 @@ def test_liveness_guard_is_an_epoch_not_a_permanent_fallback() -> None:
         _make_request("r2", num_computed_tokens=200, num_preemptions=4),
         _make_request("r3", num_computed_tokens=100, num_preemptions=4),
     ]
-    selector._liveness_progress.update(
-        {"r1": (0, 2), "r2": (0, 2), "r3": (0, 2)}
-    )
     selector.select_victim(
         SimpleNamespace(**{**vars(context), "candidates": tuple(second_epoch), "now": 3.0})
     )
@@ -233,71 +224,6 @@ def test_requester_guard_avoids_marginal_multi_victim_cascade() -> None:
 
     assert selector.select_victim(context) == "requester"
     assert selector.export_metrics()["cascade_guard_hits"] == 1
-
-
-def test_liveness_throttles_one_repeated_high_value_victim() -> None:
-    selector = BidkvVictimSelector(
-        BidkvSelectorConfig(
-            enable_utility_victim_selection=True,
-            utility_liveness_preemptions=2,
-            utility_cascade_gain_ratio=1.25,
-        )
-    )
-    counts = {"large": 0, "medium": 0, "small": 0}
-    selected = []
-    for step in range(4):
-        candidates = (
-            _make_request(
-                "large", num_computed_tokens=20_000, num_preemptions=counts["large"]
-            ),
-            _make_request(
-                "medium", num_computed_tokens=4_000, num_preemptions=counts["medium"]
-            ),
-            _make_request(
-                "small", num_computed_tokens=1_000, num_preemptions=counts["small"]
-            ),
-        )
-        victim = selector.select_victim(
-            SimpleNamespace(
-                candidates=candidates,
-                scheduling_policy="fcfs",
-                requesting_request_id="large",
-                kv_cache_usage=1.0,
-                now=float(step),
-            )
-        )
-        counts[victim] += 1
-        selected.append(victim)
-
-    assert selected[:3] == ["large", "large", "large"]
-    assert selected[3] == "medium"
-    metrics = selector.export_metrics()
-    assert metrics["liveness_throttle_hits"] == 1
-    assert metrics["liveness_epochs"] == 0
-
-
-def test_liveness_allows_victim_that_continues_output_progress() -> None:
-    selector = BidkvVictimSelector(
-        BidkvSelectorConfig(
-            enable_utility_victim_selection=True,
-            utility_liveness_preemptions=2,
-        )
-    )
-    selector._liveness_progress["large"] = (10, 2)
-    context = SimpleNamespace(
-        candidates=(
-            _make_request("large", num_computed_tokens=20_000, output_tokens=11),
-            _make_request("small", num_computed_tokens=1_000, output_tokens=100),
-        ),
-        scheduling_policy="fcfs",
-        requesting_request_id="large",
-        kv_cache_usage=1.0,
-        now=1.0,
-    )
-
-    assert selector.select_victim(context) == "large"
-    assert selector.export_metrics()["liveness_throttle_hits"] == 0
-    assert selector._liveness_progress["large"] == (11, 0)
 
 
 def test_requester_guard_keeps_material_utility_gain() -> None:
@@ -488,9 +414,6 @@ class TestBidkvVictimSelectorRuntime:
             _make_request("r2", num_computed_tokens=200, num_preemptions=4),
             _make_request("r3", num_computed_tokens=100, num_preemptions=3),
         ]
-        selector._liveness_progress.update(
-            {"r1": (0, 2), "r2": (0, 2), "r3": (0, 2)}
-        )
 
         victim = selector.pick_victim(running, SchedulingPolicy.FCFS, kv_utilization=1.0)
 
@@ -501,7 +424,7 @@ class TestBidkvVictimSelectorRuntime:
         assert metrics["default_strategy_hits"] == 1
         assert selector._last_decision["decision_reason"] == "liveness_fallback"
 
-    def test_liveness_throttle_selects_candidate_with_epoch_budget(self):
+    def test_liveness_fallback_waits_until_every_candidate_repeated(self):
         from vllm.v1.core.sched.request_queue import SchedulingPolicy
 
         selector = BidkvVictimSelector.from_vllm_config(
@@ -517,13 +440,11 @@ class TestBidkvVictimSelectorRuntime:
             _make_request("r2", num_computed_tokens=200, num_preemptions=1),
             _make_request("r3", num_computed_tokens=100, num_preemptions=4),
         ]
-        selector._liveness_progress.update({"r1": (0, 2), "r3": (0, 2)})
 
         victim = selector.pick_victim(running, SchedulingPolicy.FCFS, kv_utilization=1.0)
 
-        assert victim.request_id == "r2"
+        assert victim.request_id == "r1"
         assert selector.export_metrics()["liveness_fallback_hits"] == 0
-        assert selector.export_metrics()["liveness_throttle_hits"] == 1
 
     def test_kill_switch_falls_back_to_default(self):
         from vllm.v1.core.sched.request_queue import SchedulingPolicy
