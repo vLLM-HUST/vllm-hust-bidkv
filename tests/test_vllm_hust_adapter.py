@@ -57,6 +57,7 @@ class TestBidkvSelectorConfig:
         assert config.utility_preempt_weight == 0.3
         assert config.utility_kv_gate == 0.0
         assert config.utility_liveness_preemptions == 2
+        assert config.utility_cascade_gain_ratio == 1.25
 
     def test_validate_raises_on_negative_weights(self):
         with pytest.raises(ValueError):
@@ -65,6 +66,8 @@ class TestBidkvSelectorConfig:
             BidkvSelectorConfig(utility_preempt_weight=-1).validate()
         with pytest.raises(ValueError):
             BidkvSelectorConfig(utility_liveness_preemptions=-1).validate()
+        with pytest.raises(ValueError):
+            BidkvSelectorConfig(utility_cascade_gain_ratio=0.99).validate()
 
     def test_validate_raises_on_invalid_kv_gate(self):
         with pytest.raises(ValueError):
@@ -154,6 +157,134 @@ def test_liveness_fallback_without_vllm_runtime() -> None:
     assert victim.request_id == "r3"
     assert selector.export_metrics()["liveness_fallback_hits"] == 1
     assert selector._last_decision["decision_reason"] == "liveness_fallback"
+
+
+def test_liveness_guard_is_an_epoch_not_a_permanent_fallback() -> None:
+    selector = BidkvVictimSelector(
+        BidkvSelectorConfig(
+            enable_utility_victim_selection=True,
+            utility_liveness_preemptions=2,
+        )
+    )
+    first_epoch = [
+        _make_request("r1", num_computed_tokens=300, num_preemptions=2),
+        _make_request("r2", num_computed_tokens=200, num_preemptions=2),
+        _make_request("r3", num_computed_tokens=100, num_preemptions=2),
+    ]
+    context = SimpleNamespace(
+        candidates=tuple(first_epoch),
+        scheduling_policy="fcfs",
+        requesting_request_id="r2",
+        kv_cache_usage=1.0,
+        now=1.0,
+    )
+    assert selector.select_victim(context) == "r2"
+    assert selector.export_metrics()["liveness_fallback_hits"] == 1
+
+    # Unchanged cumulative counts are below the new epoch-relative threshold,
+    # so utility immediately becomes active again.
+    selector.select_victim(SimpleNamespace(**{**vars(context), "now": 2.0}))
+    metrics = selector.export_metrics()
+    assert metrics["liveness_fallback_hits"] == 1
+    assert metrics["utility_strategy_hits"] == 1
+
+    second_epoch = [
+        _make_request("r1", num_computed_tokens=300, num_preemptions=4),
+        _make_request("r2", num_computed_tokens=200, num_preemptions=4),
+        _make_request("r3", num_computed_tokens=100, num_preemptions=4),
+    ]
+    selector.select_victim(
+        SimpleNamespace(**{**vars(context), "candidates": tuple(second_epoch), "now": 3.0})
+    )
+    metrics = selector.export_metrics()
+    assert metrics["liveness_fallback_hits"] == 2
+    assert metrics["liveness_epochs"] == 2
+
+
+def test_requester_guard_avoids_marginal_multi_victim_cascade() -> None:
+    selector = BidkvVictimSelector(
+        BidkvSelectorConfig(
+            enable_utility_victim_selection=True,
+            utility_liveness_preemptions=0,
+            utility_cascade_gain_ratio=1.25,
+        )
+    )
+    running = (
+        _make_request("largest", num_computed_tokens=1000),
+        _make_request("requester", num_computed_tokens=900),
+        _make_request("small", num_computed_tokens=100),
+    )
+    context = SimpleNamespace(
+        candidates=running,
+        scheduling_policy="fcfs",
+        requesting_request_id="requester",
+        kv_cache_usage=1.0,
+        now=1.0,
+    )
+
+    assert selector.select_victim(context) == "requester"
+    assert selector.export_metrics()["cascade_guard_hits"] == 1
+
+
+def test_requester_guard_keeps_material_utility_gain() -> None:
+    selector = BidkvVictimSelector(
+        BidkvSelectorConfig(
+            enable_utility_victim_selection=True,
+            utility_liveness_preemptions=0,
+            utility_cascade_gain_ratio=1.25,
+        )
+    )
+    context = SimpleNamespace(
+        candidates=(
+            _make_request("largest", num_computed_tokens=2000),
+            _make_request("requester", num_computed_tokens=900),
+        ),
+        scheduling_policy="fcfs",
+        requesting_request_id="requester",
+        kv_cache_usage=1.0,
+        now=1.0,
+    )
+
+    assert selector.select_victim(context) == "largest"
+    assert selector.export_metrics()["cascade_guard_hits"] == 0
+
+
+def test_sustained_pressure_trace_stays_bounded_and_utility_active() -> None:
+    selector = BidkvVictimSelector(
+        BidkvSelectorConfig(
+            enable_utility_victim_selection=True,
+            utility_liveness_preemptions=2,
+            utility_cascade_gain_ratio=1.25,
+        )
+    )
+    counts = {"r0": 0, "r1": 0, "r2": 0}
+    selected = {key: 0 for key in counts}
+    for step in range(120):
+        candidates = tuple(
+            _make_request(
+                request_id,
+                num_computed_tokens=1000 - index * 25,
+                num_preemptions=counts[request_id],
+            )
+            for index, request_id in enumerate(counts)
+        )
+        requesting = f"r{step % 3}"
+        victim = selector.select_victim(
+            SimpleNamespace(
+                candidates=candidates,
+                scheduling_policy="fcfs",
+                requesting_request_id=requesting,
+                kv_cache_usage=1.0,
+                now=float(step),
+            )
+        )
+        counts[victim] += 1
+        selected[victim] += 1
+
+    metrics = selector.export_metrics()
+    assert metrics["utility_strategy_hits"] / metrics["total_preemptions"] >= 0.75
+    assert metrics["liveness_fallback_hits"] > 0
+    assert max(selected.values()) - min(selected.values()) <= 2
 
 
 # ---------------------------------------------------------------------------

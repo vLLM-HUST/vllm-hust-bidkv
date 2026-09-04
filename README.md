@@ -181,10 +181,15 @@ failures; an invalid result or runtime exception is logged once and permanently
 restores the built-in victim policy for that engine process. Constructor or
 configuration errors fail startup.
 
-BidKV also has a forward-progress guard. If every runnable request has already
-been preempted at least `BIDKV_UTILITY_LIVENESS_PREEMPTIONS` times (default 2),
-it records `LIVENESS_FALLBACK` and uses vLLM's stable default victim order for
-that decision. Set the value to `0` only to disable this guard for controlled
+BidKV also has a bounded forward-progress guard. After every runnable request
+has accumulated another `BIDKV_UTILITY_LIVENESS_PREEMPTIONS` preemptions
+(default 2) within the current epoch, one `LIVENESS_FALLBACK` progress-barrier
+decision preempts the requesting request (or the stable default if unavailable),
+then advances per-request offsets and immediately re-enables utility selection.
+This avoids the old permanent-default state. Utility selection also prefers the
+request whose allocation failed when it frees within
+`BIDKV_UTILITY_CASCADE_GAIN_RATIO` (default 1.25) of the top candidate, bounding
+multi-victim cascades. Set the liveness threshold to `0` only for controlled
 experiments.
 
 Lifecycle labels are deliberately separate:

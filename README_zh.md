@@ -162,10 +162,13 @@ Manager 会校验精确宿主协议，并渲染
 控制器记录调用、选择、弃权、非法返回和故障计数；非法返回或运行时异常会明确记日志，
 并在当前 Engine 进程内永久恢复 vLLM 内置策略。构造或配置错误直接阻止启动。
 
-BidKV 还包含前向进展保护：当所有可运行请求都已至少被抢占
-`BIDKV_UTILITY_LIVENESS_PREEMPTIONS` 次（默认 2 次）时，本次决策记录
-`LIVENESS_FALLBACK`，并恢复使用 vLLM 稳定的默认 victim 顺序。只有受控实验才应把
-该值设为 `0` 以关闭保护。
+BidKV 还包含有界前向进展保护：当前 epoch 内所有可运行请求又累计达到
+`BIDKV_UTILITY_LIVENESS_PREEMPTIONS` 次抢占（默认 2 次）后，只执行一次
+`LIVENESS_FALLBACK` 进展屏障，优先抢占本次申请分配失败的请求（否则使用稳定默认
+victim），随后推进每请求 offset 并立即恢复效用选择，避免旧实现永久退化到默认策略。
+若申请失败请求释放的 KV 达到最佳候选的
+`BIDKV_UTILITY_CASCADE_GAIN_RATIO` 倍范围内（默认 1.25），效用路径也优先选择它，
+从而限制单次调度中的多 victim 级联。只有受控实验才应把前进阈值设为 `0`。
 
 状态必须分开表达：
 

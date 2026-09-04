@@ -118,6 +118,7 @@ def test_experimental_extension_manifest_matches_native_policy() -> None:
             "BIDKV_UTILITY_ENABLE": "1",
             "BIDKV_UTILITY_STRATEGY": "bidkv",
             "BIDKV_UTILITY_LIVENESS_PREEMPTIONS": "2",
+            "BIDKV_UTILITY_CASCADE_GAIN_RATIO": "1.25",
         },
         "additional_config": {
             "_manager_runtime_qualification": {
@@ -125,8 +126,8 @@ def test_experimental_extension_manifest_matches_native_policy() -> None:
                     "execution_mode": "graph",
                     "model": "Qwen3.8-27B",
                     "tensor_parallel_size": 4,
-                    "status": "compatible",
-                    "evidence": "docs/evidence/sage-mate-20260904-tp4-graph.md",
+                    "status": "incompatible",
+                    "evidence": "docs/evidence/sage-mate-20260905-current-main-tp4-graph.md",
                 },
         },
     }
