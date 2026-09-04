@@ -1,9 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Legacy BidKV victim selector for a pinned vLLM-HUST fork.
-
-Implements the historical ``VictimSelector`` protocol. The main BidKV
-distribution deliberately does not register its non-upstream entry-point
-group; this module remains importable for contract replay only.
+"""BidKV policy for vLLM's immutable preemption extension API.
 
 Utility formula:
     U = r / (delta + epsilon)
@@ -23,17 +19,21 @@ import time
 from collections import defaultdict, deque
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
-    from vllm.v1.core.sched.request_queue import SchedulingPolicy
-    from vllm.v1.request import Request
+    from vllm.v1.core.sched.preemption import PreemptionContext
 
 
-def _get_scheduling_policy():
-    """Lazy import — avoids pulling in the full vllm import chain until needed."""
-    from vllm.v1.core.sched.request_queue import SchedulingPolicy
-    return SchedulingPolicy
+class _Candidate(Protocol):
+    request_id: str
+    priority: int
+    arrival_time: float
+    num_output_tokens: int
+    num_computed_tokens: int
+    num_preemptions: int
+    max_tokens: int
+
 
 _DEFAULT_MAX_TOKENS = 1024
 
@@ -80,29 +80,17 @@ class BidkvSelectorConfig:
     @classmethod
     def from_env(cls) -> BidkvSelectorConfig:
         return cls(
-            enable_utility_victim_selection=_env_bool(
-                "BIDKV_UTILITY_ENABLE"
-            ),
+            enable_utility_victim_selection=_env_bool("BIDKV_UTILITY_ENABLE"),
             utility_strategy=os.getenv("BIDKV_UTILITY_STRATEGY", "bidkv"),
             utility_kill_switch=_env_bool("BIDKV_UTILITY_KILL_SWITCH"),
-            utility_completion_weight=_env_float(
-                "BIDKV_UTILITY_COMPLETION_WEIGHT", "0.5"
-            ),
-            utility_preempt_weight=_env_float(
-                "BIDKV_UTILITY_PREEMPT_WEIGHT", "0.3"
-            ),
+            utility_completion_weight=_env_float("BIDKV_UTILITY_COMPLETION_WEIGHT", "0.5"),
+            utility_preempt_weight=_env_float("BIDKV_UTILITY_PREEMPT_WEIGHT", "0.3"),
             utility_kv_gate=_env_float("BIDKV_UTILITY_KV_GATE", "0.0"),
             utility_cooldown_s=_env_float("BIDKV_UTILITY_COOLDOWN_S", "0.0"),
             utility_min_running=_env_int("BIDKV_UTILITY_MIN_RUNNING", "1"),
-            utility_snapshot_enabled=_env_bool(
-                "BIDKV_UTILITY_SNAPSHOT_ENABLED"
-            ),
-            utility_snapshot_top_k=_env_int(
-                "BIDKV_UTILITY_SNAPSHOT_TOP_K", "3"
-            ),
-            utility_snapshot_history_size=_env_int(
-                "BIDKV_UTILITY_SNAPSHOT_HISTORY_SIZE", "32"
-            ),
+            utility_snapshot_enabled=_env_bool("BIDKV_UTILITY_SNAPSHOT_ENABLED"),
+            utility_snapshot_top_k=_env_int("BIDKV_UTILITY_SNAPSHOT_TOP_K", "3"),
+            utility_snapshot_history_size=_env_int("BIDKV_UTILITY_SNAPSHOT_HISTORY_SIZE", "32"),
             utility_epsilon=_env_float("BIDKV_UTILITY_EPSILON", "1e-6"),
             utility_default_max_tokens=_env_int(
                 "BIDKV_UTILITY_DEFAULT_MAX_TOKENS",
@@ -126,13 +114,9 @@ class BidkvSelectorConfig:
                     defaults.enable_utility_victim_selection,
                 )
             ),
-            utility_strategy=str(
-                config_data.get("utility_strategy", defaults.utility_strategy)
-            ),
+            utility_strategy=str(config_data.get("utility_strategy", defaults.utility_strategy)),
             utility_kill_switch=bool(
-                config_data.get(
-                    "utility_kill_switch", defaults.utility_kill_switch
-                )
+                config_data.get("utility_kill_switch", defaults.utility_kill_switch)
             ),
             utility_completion_weight=float(
                 config_data.get(
@@ -146,18 +130,12 @@ class BidkvSelectorConfig:
                     defaults.utility_preempt_weight,
                 )
             ),
-            utility_kv_gate=float(
-                config_data.get("utility_kv_gate", defaults.utility_kv_gate)
-            ),
+            utility_kv_gate=float(config_data.get("utility_kv_gate", defaults.utility_kv_gate)),
             utility_cooldown_s=float(
-                config_data.get(
-                    "utility_cooldown_s", defaults.utility_cooldown_s
-                )
+                config_data.get("utility_cooldown_s", defaults.utility_cooldown_s)
             ),
             utility_min_running=int(
-                config_data.get(
-                    "utility_min_running", defaults.utility_min_running
-                )
+                config_data.get("utility_min_running", defaults.utility_min_running)
             ),
             utility_snapshot_enabled=bool(
                 config_data.get(
@@ -177,9 +155,7 @@ class BidkvSelectorConfig:
                     defaults.utility_snapshot_history_size,
                 )
             ),
-            utility_epsilon=float(
-                config_data.get("utility_epsilon", defaults.utility_epsilon)
-            ),
+            utility_epsilon=float(config_data.get("utility_epsilon", defaults.utility_epsilon)),
             utility_default_max_tokens=int(
                 config_data.get(
                     "utility_default_max_tokens",
@@ -192,9 +168,7 @@ class BidkvSelectorConfig:
 
     @classmethod
     def from_vllm_config(cls, vllm_config) -> BidkvSelectorConfig:
-        additional_config = (
-            getattr(vllm_config, "additional_config", None) or {}
-        )
+        additional_config = getattr(vllm_config, "additional_config", None) or {}
         return cls.from_additional_config(additional_config)
 
     def validate(self) -> None:
@@ -258,10 +232,10 @@ class UtilityCandidateScore:
 # ---------------------------------------------------------------------------
 
 
-class BidkvVictimSelector:
-    """BidKV utility-based victim selector for vLLM HUST.
+class BidkvPreemptionPolicy:
+    """BidKV utility-based preemption policy for vLLM.
 
-    Implements the ``VictimSelector`` protocol.  When utility mode
+    Implements the immutable ``PreemptionPolicy`` protocol. When utility mode
     is enabled (and gating conditions are met), preempted victims are chosen
     by maximising U = r / (delta + epsilon).  Otherwise falls back to the
     default scheduler policy (FCFS tail or highest priority).
@@ -274,7 +248,7 @@ class BidkvVictimSelector:
         bidkv           — utility-ranked U = r/(δ+ε)
     """
 
-    vllm_victim_selector_api_version = 1
+    vllm_preemption_policy_api_version = 1
 
     def __init__(self, config: BidkvSelectorConfig) -> None:
         self.config = config
@@ -291,9 +265,7 @@ class BidkvVictimSelector:
         self._preemptions_per_request: dict[str, int] = defaultdict(int)
         self._recent_preempted_req_ids: deque[str] = deque(maxlen=snapshot_size)
         self._last_decision: dict[str, Any] | None = None
-        self._decision_snapshots: deque[dict[str, Any]] = deque(
-            maxlen=snapshot_size
-        )
+        self._decision_snapshots: deque[dict[str, Any]] = deque(maxlen=snapshot_size)
         logging.getLogger("vllm").info(
             "[BidKV] INIT | enabled=%s | strategy=%s | kv_gate=%.2f | min_running=%d | "
             "completion_w=%.2f | preempt_w=%.2f",
@@ -305,36 +277,54 @@ class BidkvVictimSelector:
             self.config.utility_preempt_weight,
         )
 
-    # -- Factory (VictimSelector protocol) --------------------------------
+    # -- Factory (PreemptionPolicy protocol) ------------------------------
 
     @classmethod
-    def from_vllm_config(cls, vllm_config) -> BidkvVictimSelector:
+    def from_vllm_config(cls, vllm_config) -> BidkvPreemptionPolicy:
         return cls(BidkvSelectorConfig.from_vllm_config(vllm_config))
 
-    # -- Public API (VictimSelector protocol) ------------------------------
+    # -- Public API (PreemptionPolicy protocol) ----------------------------
 
-    def pick_victim(
-        self,
-        running: Sequence[Request],
-        policy: SchedulingPolicy,
-        *,
-        kv_utilization: float | None = None,
-        now_s: float | None = None,
-    ) -> Request:
+    def select_victim(self, context: PreemptionContext) -> str:
+        running = context.candidates
         if not running:
             raise ValueError("running is empty, cannot pick victim")
 
         strategy = self.config.utility_strategy if self._utility_enabled else "pe"
-        now = self._resolve_now(now_s)
+        now = self._resolve_now(context.now)
+        policy = context.scheduling_policy
+        kv_utilization = context.kv_cache_usage
 
         if strategy == "bidkv":
-            return self._pick_bidkv_victim(running, policy, kv_utilization, now)
+            victim = self._pick_bidkv_victim(running, policy, kv_utilization, now)
         elif strategy == "static-random":
-            return self._pick_random_victim(running, policy, kv_utilization, now)
+            victim = self._pick_random_victim(running, policy, kv_utilization, now)
         elif strategy == "largest-first":
-            return self._pick_largest_first_victim(running, policy, kv_utilization, now)
+            victim = self._pick_largest_first_victim(running, policy, kv_utilization, now)
         else:
-            return self._pick_pe_victim(running, policy, kv_utilization, now)
+            victim = self._pick_pe_victim(running, policy, kv_utilization, now)
+        return victim.request_id
+
+    def pick_victim(
+        self,
+        running: Sequence[_Candidate],
+        policy: Any,
+        *,
+        kv_utilization: float | None = None,
+        now_s: float | None = None,
+    ) -> _Candidate:
+        """Compatibility shim for offline traces from the pre-0.28 API."""
+        policy_value = getattr(policy, "value", None)
+        if policy_value is None:
+            policy_value = str(getattr(policy, "name", policy)).lower()
+        context = _LegacyContext(
+            candidates=tuple(running),
+            scheduling_policy=policy_value,
+            kv_cache_usage=kv_utilization or 0.0,
+            now=self._resolve_now(now_s),
+        )
+        selected_id = self.select_victim(context)  # type: ignore[arg-type]
+        return next(candidate for candidate in running if candidate.request_id == selected_id)
 
     def emit_observability_log(self, logger, scheduler_name: str) -> None:
         metrics = self.export_metrics()
@@ -385,8 +375,7 @@ class BidkvVictimSelector:
         consecutive_preempt_ratio = 0.0
         if self._consecutive_preemption_checks > 0:
             consecutive_preempt_ratio = (
-                self._consecutive_preemption_events
-                / self._consecutive_preemption_checks
+                self._consecutive_preemption_events / self._consecutive_preemption_checks
             )
 
         return {
@@ -410,56 +399,64 @@ class BidkvVictimSelector:
 
     # ── Strategy implementations ──────────────────────────────────
 
-    def _pick_pe_victim(
-        self, running, policy, kv_utilization, now
-    ) -> Request:
+    def _pick_pe_victim(self, running, policy, kv_utilization, now) -> _Candidate:
         victim = self._pick_default_victim(running, policy)
         self._record_preemption(
-            victim=victim, used_utility=False, policy=policy,
-            kv_utilization=kv_utilization, now_s=now,
-            default_victim=victim, ranked_candidates=[],
+            victim=victim,
+            used_utility=False,
+            policy=policy,
+            kv_utilization=kv_utilization,
+            now_s=now,
+            default_victim=victim,
+            ranked_candidates=[],
             running_size=len(running),
         )
         return victim
 
-    def _pick_random_victim(
-        self, running, policy, kv_utilization, now
-    ) -> Request:
+    def _pick_random_victim(self, running, policy, kv_utilization, now) -> _Candidate:
         import random as _random
+
         victim = _random.choice(list(running))
         logging.getLogger("vllm").info(
             "[BidKV] RANDOM | victim=%s | kv_util=%.2f | running=%d",
-            getattr(victim, "request_id", "?"), kv_utilization or 0.0, len(running),
+            getattr(victim, "request_id", "?"),
+            kv_utilization or 0.0,
+            len(running),
         )
         self._record_preemption(
-            victim=victim, used_utility=True, policy=policy,
-            kv_utilization=kv_utilization, now_s=now,
+            victim=victim,
+            used_utility=True,
+            policy=policy,
+            kv_utilization=kv_utilization,
+            now_s=now,
             default_victim=self._pick_default_victim(running, policy),
-            ranked_candidates=[], running_size=len(running),
+            ranked_candidates=[],
+            running_size=len(running),
         )
         return victim
 
-    def _pick_largest_first_victim(
-        self, running, policy, kv_utilization, now
-    ) -> Request:
+    def _pick_largest_first_victim(self, running, policy, kv_utilization, now) -> _Candidate:
         victim = max(running, key=lambda r: getattr(r, "num_computed_tokens", 0))
         logging.getLogger("vllm").info(
             "[BidKV] LARGEST_FIRST | victim=%s | tokens=%d | kv_util=%.2f | running=%d",
             getattr(victim, "request_id", "?"),
             getattr(victim, "num_computed_tokens", 0),
-            kv_utilization or 0.0, len(running),
+            kv_utilization or 0.0,
+            len(running),
         )
         self._record_preemption(
-            victim=victim, used_utility=True, policy=policy,
-            kv_utilization=kv_utilization, now_s=now,
+            victim=victim,
+            used_utility=True,
+            policy=policy,
+            kv_utilization=kv_utilization,
+            now_s=now,
             default_victim=self._pick_default_victim(running, policy),
-            ranked_candidates=[], running_size=len(running),
+            ranked_candidates=[],
+            running_size=len(running),
         )
         return victim
 
-    def _pick_bidkv_victim(
-        self, running, policy, kv_utilization, now
-    ) -> Request:
+    def _pick_bidkv_victim(self, running, policy, kv_utilization, now) -> _Candidate:
         if (
             self.config.utility_kv_gate > 0
             and kv_utilization is not None
@@ -469,14 +466,18 @@ class BidkvVictimSelector:
 
         default_victim = self._pick_default_victim(running, policy)
         utility_enabled = self._can_use_utility(
-            kv_utilization=kv_utilization, now_s=now, running_size=len(running),
+            kv_utilization=kv_utilization,
+            now_s=now,
+            running_size=len(running),
         )
 
         if not utility_enabled:
             victim = default_victim
             reason_parts = ["main_switch_off"] if not self._utility_enabled else []
             if len(running) < self.config.utility_min_running:
-                reason_parts.append(f"running({len(running)})<min({self.config.utility_min_running})")
+                reason_parts.append(
+                    f"running({len(running)})<min({self.config.utility_min_running})"
+                )
             if (
                 self.config.utility_kv_gate > 0
                 and (kv_utilization or 0) < self.config.utility_kv_gate
@@ -484,13 +485,19 @@ class BidkvVictimSelector:
                 reason_parts.append(f"kv({kv_utilization:.2f})<gate({self.config.utility_kv_gate})")
             logging.getLogger("vllm").info(
                 "[BidKV] FALLBACK | victim=%s (default) | reason=%s | kv_util=%.2f | running=%d",
-                victim.request_id, ",".join(reason_parts) or "unknown",
-                kv_utilization or 0.0, len(running),
+                victim.request_id,
+                ",".join(reason_parts) or "unknown",
+                kv_utilization or 0.0,
+                len(running),
             )
             self._record_preemption(
-                victim=victim, used_utility=False, policy=policy,
-                kv_utilization=kv_utilization, now_s=now,
-                default_victim=default_victim, ranked_candidates=[],
+                victim=victim,
+                used_utility=False,
+                policy=policy,
+                kv_utilization=kv_utilization,
+                now_s=now,
+                default_victim=default_victim,
+                ranked_candidates=[],
                 running_size=len(running),
             )
             return victim
@@ -502,13 +509,20 @@ class BidkvVictimSelector:
         logging.getLogger("vllm").info(
             "[BidKV] UTILITY_ACTIVE | victim=%s | U=%.4f | r=%d tok | "
             "completion=%.2f | preemptions=%d | kv_util=%.2f | running=%d",
-            top.request_id, top.utility, top.tokens_freed,
-            top.completion, top.num_preemptions,
-            kv_utilization or 0.0, len(running),
+            top.request_id,
+            top.utility,
+            top.tokens_freed,
+            top.completion,
+            top.num_preemptions,
+            kv_utilization or 0.0,
+            len(running),
         )
         self._record_preemption(
-            victim=victim, used_utility=True, policy=policy,
-            kv_utilization=kv_utilization, now_s=now,
+            victim=victim,
+            used_utility=True,
+            policy=policy,
+            kv_utilization=kv_utilization,
+            now_s=now,
             default_victim=default_victim,
             ranked_candidates=ranked_candidates,
             running_size=len(running),
@@ -519,17 +533,11 @@ class BidkvVictimSelector:
 
     @property
     def _utility_enabled(self) -> bool:
-        return (
-            self.config.enable_utility_victim_selection
-            and not self.config.utility_kill_switch
-        )
+        return self.config.enable_utility_victim_selection and not self.config.utility_kill_switch
 
     @staticmethod
-    def _pick_default_victim(
-        running: Sequence[Request], policy: SchedulingPolicy
-    ) -> Request:
-        SchedulingPolicy = _get_scheduling_policy()
-        if policy == SchedulingPolicy.PRIORITY:
+    def _pick_default_victim(running: Sequence[_Candidate], policy: str) -> _Candidate:
+        if policy == "priority":
             return max(
                 running,
                 key=lambda request: (request.priority, request.arrival_time),
@@ -546,14 +554,10 @@ class BidkvVictimSelector:
         if running_size < self.config.utility_min_running:
             return False
         if self.config.utility_kv_gate > 0 and (
-            kv_utilization is None
-            or kv_utilization < self.config.utility_kv_gate
+            kv_utilization is None or kv_utilization < self.config.utility_kv_gate
         ):
             return False
-        if (
-            self.config.utility_cooldown_s > 0
-            and self._last_utility_pick_ts > -math.inf
-        ):
+        if self.config.utility_cooldown_s > 0 and self._last_utility_pick_ts > -math.inf:
             now = self._resolve_now(now_s)
             if now - self._last_utility_pick_ts < self.config.utility_cooldown_s:
                 return False
@@ -566,33 +570,23 @@ class BidkvVictimSelector:
         return time.monotonic()
 
     def _rank_candidates(
-        self, running: Sequence[Request]
-    ) -> tuple[list[UtilityCandidateScore], dict[str, Request]]:
-        req_map: dict[str, Request] = {}
+        self, running: Sequence[_Candidate]
+    ) -> tuple[list[UtilityCandidateScore], dict[str, _Candidate]]:
+        req_map: dict[str, _Candidate] = {}
         candidates: list[UtilityCandidateScore] = []
         for request in running:
             request_id = str(getattr(request, "request_id", ""))
             req_map[request_id] = request
             candidates.append(self._score_request(request, request_id))
 
-        candidates.sort(
-            key=lambda c: (-c.utility, c.arrival_time, c.request_id)
-        )
+        candidates.sort(key=lambda c: (-c.utility, c.arrival_time, c.request_id))
         return candidates, req_map
 
-    def _score_request(
-        self, request: Request, request_id: str
-    ) -> UtilityCandidateScore:
-        tokens_freed = max(
-            int(getattr(request, "num_computed_tokens", 0) or 0), 0
-        )
+    def _score_request(self, request: _Candidate, request_id: str) -> UtilityCandidateScore:
+        tokens_freed = max(int(getattr(request, "num_computed_tokens", 0) or 0), 0)
         completion = self._compute_completion(request)
-        num_preemptions = max(
-            int(getattr(request, "num_preemptions", 0) or 0), 0
-        )
-        arrival_time = float(
-            getattr(request, "arrival_time", 0.0) or 0.0
-        )
+        num_preemptions = max(int(getattr(request, "num_preemptions", 0) or 0), 0)
+        arrival_time = float(getattr(request, "arrival_time", 0.0) or 0.0)
         utility, evict_score = self._compute_utility(
             tokens_freed=tokens_freed,
             completion=completion,
@@ -623,13 +617,11 @@ class BidkvVictimSelector:
             + self.config.utility_completion_weight * completion
             + self.config.utility_preempt_weight * preemptions
         )
-        utility = reward / max(
-            delta + self.config.utility_epsilon, self.config.utility_epsilon
-        )
+        utility = reward / max(delta + self.config.utility_epsilon, self.config.utility_epsilon)
         evict_score = utility
         return utility, evict_score
 
-    def _compute_completion(self, request: Request) -> float:
+    def _compute_completion(self, request: _Candidate) -> float:
         output_tokens = self._output_tokens(request)
         max_tokens = getattr(request, "max_tokens", None)
         if not isinstance(max_tokens, (int, float)) or max_tokens <= 0:
@@ -638,31 +630,23 @@ class BidkvVictimSelector:
         return min(max(completion, 0.0), 1.0)
 
     @staticmethod
-    def _output_tokens(request: Request) -> int:
-        output_token_ids = getattr(request, "output_token_ids", None)
-        if output_token_ids is not None:
-            try:
-                return len(output_token_ids)
-            except TypeError:
-                pass
+    def _output_tokens(request: _Candidate) -> int:
         return int(getattr(request, "num_output_tokens", 0) or 0)
 
     def _record_preemption(
         self,
         *,
-        victim: Request,
+        victim: _Candidate,
         used_utility: bool,
-        policy: SchedulingPolicy,
+        policy: str,
         kv_utilization: float | None,
         now_s: float,
-        default_victim: Request,
+        default_victim: _Candidate,
         ranked_candidates: Sequence[UtilityCandidateScore],
         running_size: int,
     ) -> None:
         request_id = str(getattr(victim, "request_id", ""))
-        tokens_freed = max(
-            int(getattr(victim, "num_computed_tokens", 0) or 0), 0
-        )
+        tokens_freed = max(int(getattr(victim, "num_computed_tokens", 0) or 0), 0)
 
         self._total_preemptions += 1
         self._total_tokens_freed += tokens_freed
@@ -684,7 +668,7 @@ class BidkvVictimSelector:
         default_id = str(getattr(default_victim, "request_id", ""))
         self._last_decision = {
             "timestamp_s": round(now_s, 6),
-            "policy": getattr(policy, "name", str(policy)),
+            "policy": policy,
             "used_utility": used_utility,
             "kv_utilization": kv_utilization,
             "running_size": running_size,
@@ -720,3 +704,16 @@ class BidkvVictimSelector:
         rank = math.ceil((percentile / 100.0) * len(data)) - 1
         rank = max(0, min(rank, len(data) - 1))
         return float(data[rank])
+
+
+# Temporary import alias for callers migrating from the pre-0.28 HUST class
+# name. It implements only the new PreemptionPolicy method.
+BidkvVictimSelector = BidkvPreemptionPolicy
+
+
+@dataclass(frozen=True)
+class _LegacyContext:
+    candidates: tuple[_Candidate, ...]
+    scheduling_policy: str
+    kv_cache_usage: float
+    now: float

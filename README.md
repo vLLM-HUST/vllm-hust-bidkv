@@ -115,24 +115,25 @@ HF_HUB_OFFLINE=1 python -m bidkv.experiments.sglang.runner \
 
 ## Framework Integration (vLLM)
 
-vLLM-HUST 0.23 exposes the generic typed `vllm.scheduler.policy.v1` host
-contract. BidKV supplies only the policy implementation and does not own
-preemption, KV cleanup, or queue mutation. Official vLLM does not yet support
-this HUST contract.
+The Sage Mate target at vLLM-HUST `762f85b3` (`0.28.1rc1.dev319`) exposes the
+immutable `vllm.preemption-policy.v1` contract. BidKV supplies
+`BidkvPreemptionPolicy`; vLLM retains ownership of request state, preemption,
+KV cleanup, reinsertion, and scheduling-budget rollback. The production path
+does not monkey-patch `Scheduler`.
 
 ```bash
 pip install vllm-hust-ext bidkv
 vllm-hust-ext extension enable org.vllm-hust.bidkv
-vllm-hust-ext run -- vllm serve meta-llama/Llama-3.1-8B-Instruct \
-    --enforce-eager --port 8000
+vllm-hust-ext run -- vllm serve /data/shared_models/Qwen/Qwen3.8-27B \
+    --tensor-parallel-size 4 --port 8000
 ```
 
 Verify the policy implementation API version:
 
 ```bash
 python - <<'PY'
-from bidkv.adapters.vllm_hust.selector import BidkvVictimSelector
-print(BidkvVictimSelector.vllm_victim_selector_api_version)
+from bidkv.adapters.vllm_hust.selector import BidkvPreemptionPolicy
+print(BidkvPreemptionPolicy.vllm_preemption_policy_api_version)
 PY
 ```
 
@@ -154,8 +155,9 @@ scheduling behavior.
 Manifest 0.2 is not a compatibility promise and must not be published as a
 stable Bundle v1 contract before all three host-provider acceptance gates pass.
 
-> **Host boundary:** vLLM-HUST 0.23 supports
-> `vllm.scheduler.policy.v1`; official vLLM does not. The upstream direction is RFC
+> **Host boundary:** the pinned vLLM-HUST target supports
+> `vllm.preemption-policy.v1`; official vLLM does not yet expose this contract.
+> The upstream direction is RFC
 > [#51608](https://github.com/vllm-project/vllm/issues/51608) and draft PR
 > [#51601](https://github.com/vllm-project/vllm/pull/51601), whose target
 > `vllm.scheduler_plugins`/PreemptionScore contract is not frozen. The HUST
@@ -172,13 +174,26 @@ vllm-hust-ext extension validate org.vllm-hust.bidkv
 vllm-hust-ext extension status org.vllm-hust.bidkv
 ```
 
-On vLLM-HUST 0.23, Manager converts the generic manifest into a host-native
-startup manifest and selects `org.vllm-hust.bidkv/victim-selector`. On official
-vLLM, status remains `incompatible` or `degraded` and `run` refuses activation.
-Core contract tests, real Qwen3-0.6B KV-pressure victim selection, request
-completion, disable, and next-process built-in rollback pass on server 91.
-Repeating the result from clean release image/wheel artifacts remains an alpha
-release gate.
+Manager validates the exact host protocol and renders
+`--preemption-policy bidkv.adapters.vllm_hust.selector:BidkvPreemptionPolicy`.
+The controller records calls, selections, abstentions, invalid selections, and
+failures; an invalid result or runtime exception is logged once and permanently
+restores the built-in victim policy for that engine process. Constructor or
+configuration errors fail startup.
+
+Lifecycle labels are deliberately separate:
+
+| Label | Meaning |
+| --- | --- |
+| installed | The pinned BidKV wheel and manifest are present. |
+| configured | Manager validated the host version/protocol and rendered the launch option. |
+| enabled | Saved operator intent requests BidKV on the next approved launch. |
+| runtime effective | EngineCore logs the exact class and non-zero policy-call counters from a controlled online run. |
+
+CPU contract and scheduler-path tests pass on the pinned source. Real Qwen3.8
+TP4 graph-mode qualification on independent hardware is still pending, so this
+revision must remain **unverified**, not `compatible`, until that evidence is
+attached.
 
 For a legacy replay that was explicitly enabled, disable the saved intent and
 start a fresh vLLM process to roll back:

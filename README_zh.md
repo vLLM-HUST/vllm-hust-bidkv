@@ -105,23 +105,24 @@ HF_HUB_OFFLINE=1 python -m bidkv.experiments.sglang.runner \
 
 ## 框架集成（vLLM）
 
-当前 vLLM-HUST 0.23 提供通用 typed `vllm.scheduler.policy.v1` 宿主契约；
-BidKV 只提供策略实现，不修改 scheduler 的抢占、KV 清理和重排逻辑。官方 vLLM
-尚不支持此 HUST 契约。
+Sage Mate 固定目标 vLLM-HUST `762f85b3`（`0.28.1rc1.dev319`）提供不可变的
+`vllm.preemption-policy.v1` 契约。BidKV 只提供 `BidkvPreemptionPolicy`；请求状态、
+抢占、KV 清理、重新入队以及调度预算回滚仍由 vLLM 管理。正式路径不 monkey patch
+`Scheduler`。
 
 ```bash
 pip install vllm-hust-ext bidkv
 vllm-hust-ext extension enable org.vllm-hust.bidkv
-vllm-hust-ext run -- vllm serve meta-llama/Llama-3.1-8B-Instruct \
-    --enforce-eager --port 8000
+vllm-hust-ext run -- vllm serve /data/shared_models/Qwen/Qwen3.8-27B \
+    --tensor-parallel-size 4 --port 8000
 ```
 
 可验证策略实现的 API 版本：
 
 ```bash
 python - <<'PY'
-from bidkv.adapters.vllm_hust.selector import BidkvVictimSelector
-print(BidkvVictimSelector.vllm_victim_selector_api_version)
+from bidkv.adapters.vllm_hust.selector import BidkvPreemptionPolicy
+print(BidkvPreemptionPolicy.vllm_preemption_policy_api_version)
 PY
 ```
 
@@ -139,8 +140,8 @@ import BidKV，也不会启用调度行为。
 Manifest 0.2 不构成兼容性承诺；三类 Host Provider 验收全部通过前，不能把它
 作为稳定 Bundle v1 契约发布。
 
-> **宿主边界：** vLLM-HUST 0.23 支持 `vllm.scheduler.policy.v1`；官方 vLLM
-> 尚不支持。上游方向是 RFC
+> **宿主边界：** 当前固定 vLLM-HUST 目标支持 `vllm.preemption-policy.v1`；
+> 官方 vLLM 尚未提供该契约。上游方向是 RFC
 > [#51608](https://github.com/vllm-project/vllm/issues/51608) 和 draft PR
 > [#51601](https://github.com/vllm-project/vllm/pull/51601)，其目标
 > `vllm.scheduler_plugins`/PreemptionScore 契约尚未冻结。HUST 的接口保持最小、
@@ -156,11 +157,22 @@ vllm-hust-ext extension validate org.vllm-hust.bidkv
 vllm-hust-ext extension status org.vllm-hust.bidkv
 ```
 
-在 vLLM-HUST 0.23 环境中，Manager 会把通用 manifest 转成宿主原生启动 manifest，
-并选择 `org.vllm-hust.bidkv/victim-selector`。在官方 vLLM 环境中，Manager 必须报告
-`incompatible` 或 `degraded` 并拒绝激活。91 上的核心契约测试和真实 BidKV
-materialization/轨迹回放以及真实 Qwen3-0.6B KV 压力抢占、停用、重启回退已经
-通过；从干净发布镜像和 wheel 重复该结果仍是 alpha 发布门禁。
+Manager 会校验精确宿主协议，并渲染
+`--preemption-policy bidkv.adapters.vllm_hust.selector:BidkvPreemptionPolicy`。
+控制器记录调用、选择、弃权、非法返回和故障计数；非法返回或运行时异常会明确记日志，
+并在当前 Engine 进程内永久恢复 vLLM 内置策略。构造或配置错误直接阻止启动。
+
+状态必须分开表达：
+
+| 状态 | 含义 |
+| --- | --- |
+| installed | 固定版本 BidKV wheel 与 manifest 已存在。 |
+| configured | Manager 已校验宿主版本/协议并生成启动参数。 |
+| enabled | 已保存“下次获批启动启用 BidKV”的运维意图。 |
+| runtime effective | 受控在线运行日志确认精确策略类，且调用计数非零。 |
+
+固定源码上的 CPU 契约与真实 scheduler 路径单测已通过。独立硬件上的 Qwen3.8 TP4
+graph-mode 验证尚未完成，因此当前只能标记 **unverified**，不能标记 `compatible`。
 
 如果旧回放曾被显式启用，回退时停用保存的意图并启动一个新的 vLLM 进程：
 

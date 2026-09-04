@@ -1,8 +1,8 @@
 # BidKV upstream scheduler contract gap
 
-Status: vLLM-HUST 0.23 support is implemented through the HUST-owned typed
-`vllm.scheduler.policy.v1` contract. Official-vLLM support remains blocked on
-an upstream contract. This document is not an upstream API promise.
+Status: the pinned vLLM-HUST `762f85b3` adaptation introduces the HUST-owned,
+immutable `vllm.preemption-policy.v1` contract. Official-vLLM support remains
+blocked on upstream agreement. This document is not an upstream API promise.
 
 ## Pinned upstream evidence
 
@@ -21,6 +21,11 @@ an upstream contract. This document is not an upstream API promise.
   `register_scheduler_plugin()` but no `importlib.metadata` entry-point
   discovery, even though its design document sketches a future
   `vllm.scheduler_plugins` descriptor entry point.
+- PR [#53723](https://github.com/vllm-project/vllm/pull/53723) separately adds
+  a built-in `preemption_victim={fcfs,lcf}` axis and correct bookkeeping for a
+  non-tail victim already scheduled in the current step. It is not an
+  out-of-tree policy API, but a future proposal must build on that bookkeeping
+  rather than submit a conflicting copy.
 
 These are material contract differences. BidKV must not publish an adapter
 against one draft shape and label it compatible with the other.

@@ -53,15 +53,15 @@ def test_main_wheel_registers_only_the_typed_project_manifest() -> None:
     assert '[project.entry-points."vllm_hust.extension_bundles"]' in config
     assert '"org.vllm-hust.bidkv" = "bidkv.manifests"' in config
 
-    legacy_config = (
-        REPO_ROOT / "legacy" / "vllm-general-plugin" / "pyproject.toml"
-    ).read_text(encoding="utf-8")
+    legacy_config = (REPO_ROOT / "legacy" / "vllm-general-plugin" / "pyproject.toml").read_text(
+        encoding="utf-8"
+    )
     assert '[project.entry-points."vllm.general_plugins"]' in legacy_config
     assert 'bidkv = "bidkv.adapters.vllm.plugin:register"' in legacy_config
 
-    from bidkv.adapters.vllm_hust.selector import BidkvVictimSelector
+    from bidkv.adapters.vllm_hust.selector import BidkvPreemptionPolicy
 
-    assert BidkvVictimSelector.vllm_victim_selector_api_version == 1
+    assert BidkvPreemptionPolicy.vllm_preemption_policy_api_version == 1
 
 
 def test_legacy_experiment_fails_closed_without_separate_distribution(
@@ -78,7 +78,7 @@ def test_legacy_experiment_fails_closed_without_separate_distribution(
         serve.main()
 
 
-def test_experimental_extension_manifest_matches_native_selector() -> None:
+def test_experimental_extension_manifest_matches_native_policy() -> None:
     manifest_path = REPO_ROOT / "src" / "bidkv" / "manifests" / "vllm-hust-extension-v0.2.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
@@ -88,7 +88,7 @@ def test_experimental_extension_manifest_matches_native_selector() -> None:
     assert manifest["host"] == {
         "provider": "vllm",
         "name": "vllm",
-        "version_range": ">=0.23,<0.24",
+        "version_range": ">=0.28.1rc1.dev319,<0.29",
         "api_range": ">=1,<2",
     }
     assert manifest["runtime"]["process_scope"] == "scheduler"
@@ -98,17 +98,17 @@ def test_experimental_extension_manifest_matches_native_selector() -> None:
         {
             "type": "python_module",
             "module": "bidkv.adapters.vllm_hust.selector",
-            "object": "BidkvVictimSelector",
+            "object": "BidkvPreemptionPolicy",
             "status": "active",
         }
     ]
     assert manifest["components"] == [
         {
             "component_id": "victim-selector",
-            "contracts": ["vllm.scheduler.policy.v1"],
+            "contracts": ["vllm.preemption-policy.v1"],
             "execution_planes": ["scheduler"],
             "isolation": "trusted_in_process",
-            "implementation_ref": ("bidkv.adapters.vllm_hust.selector:BidkvVictimSelector"),
+            "implementation_ref": ("bidkv.adapters.vllm_hust.selector:BidkvPreemptionPolicy"),
             "permissions": [],
         }
     ]
@@ -119,23 +119,38 @@ def test_experimental_extension_manifest_matches_native_selector() -> None:
             "BIDKV_UTILITY_STRATEGY": "bidkv",
         },
         "additional_config": {
-            "victim_selector_component": "org.vllm-hust.bidkv/victim-selector",
             "enable_utility_victim_selection": True,
             "utility_strategy": "bidkv",
+            "_manager_runtime_qualification": {
+                "accelerator": "ascend",
+                "execution_mode": "graph",
+                "model": "Qwen3.8-27B",
+                "tensor_parallel_size": 4,
+            },
         },
     }
     pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
     assert 'bidkv = ["manifests/*.json"]' in pyproject
 
 
-def test_obsolete_dev_hub_activation_manifest_is_removed() -> None:
-    assert not (REPO_ROOT / ".vllm-hust" / "optimization.json").exists()
+def test_dev_hub_activation_manifest_uses_typed_policy() -> None:
+    manifest = json.loads(
+        (REPO_ROOT / ".vllm-hust" / "optimization.json").read_text(encoding="utf-8")
+    )
+
+    assert manifest["entrypoint"] == {
+        "group": "vllm_hust.extension_bundles",
+        "name": "org.vllm-hust.bidkv",
+    }
+    assert manifest["activation"]["vllm_plugins"] == ["ascend"]
+    assert manifest["activation"]["extra_args"][:2] == [
+        "--preemption-policy",
+        "bidkv.adapters.vllm_hust.selector:BidkvPreemptionPolicy",
+    ]
 
 
 def test_upstream_contract_gap_keeps_draft_and_release_boundaries_explicit() -> None:
-    gap = (REPO_ROOT / "docs" / "upstream-scheduler-contract-gap.md").read_text(
-        encoding="utf-8"
-    )
+    gap = (REPO_ROOT / "docs" / "upstream-scheduler-contract-gap.md").read_text(encoding="utf-8")
 
     assert "f8b7db61e446911e0d62fcb8220f863d6098c471" in gap
     assert "minimum BidKV serving contract" in gap

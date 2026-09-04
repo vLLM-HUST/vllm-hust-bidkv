@@ -14,6 +14,7 @@ from bidkv.adapters.vllm_hust.selector import BidkvSelectorConfig, BidkvVictimSe
 def _vllm_hust_importable() -> bool:
     try:
         from vllm.v1.core.sched.request_queue import SchedulingPolicy  # noqa: F401
+
         return True
     except (ImportError, OSError):
         return False
@@ -36,6 +37,7 @@ def _make_request(
         arrival_time=arrival_time,
         num_computed_tokens=num_computed_tokens,
         output_token_ids=output_token_ids,
+        num_output_tokens=output_tokens,
         max_tokens=max_tokens,
         num_preemptions=num_preemptions,
     )
@@ -91,9 +93,7 @@ class TestBidkvSelectorConfig:
         assert ac["utility_completion_weight"] == 0.6
 
     def test_from_vllm_config(self):
-        vllm_config = SimpleNamespace(
-            additional_config={"enable_utility_victim_selection": True}
-        )
+        vllm_config = SimpleNamespace(additional_config={"enable_utility_victim_selection": True})
         config = BidkvSelectorConfig.from_vllm_config(vllm_config)
         assert config.enable_utility_victim_selection is True
 
@@ -111,9 +111,7 @@ class TestBidkvVictimSelectorConstruction:
         assert selector.config.enable_utility_victim_selection is False
 
     def test_enabled_selector(self):
-        vllm_config = SimpleNamespace(
-            additional_config={"enable_utility_victim_selection": True}
-        )
+        vllm_config = SimpleNamespace(additional_config={"enable_utility_victim_selection": True})
         selector = BidkvVictimSelector.from_vllm_config(vllm_config)
         assert selector._utility_enabled is True
 
@@ -128,9 +126,7 @@ class TestBidkvVictimSelectorConstruction:
         assert selector._utility_enabled is False
 
     def test_export_metrics_initial(self):
-        selector = BidkvVictimSelector.from_vllm_config(
-            SimpleNamespace(additional_config={})
-        )
+        selector = BidkvVictimSelector.from_vllm_config(SimpleNamespace(additional_config={}))
         metrics = selector.export_metrics()
         assert metrics["total_preemptions"] == 0
         assert metrics["total_tokens_freed"] == 0
@@ -147,12 +143,28 @@ class TestBidkvVictimSelectorConstruction:
     reason="vLLM HUST internals not importable (transformer version mismatch)",
 )
 class TestBidkvVictimSelectorRuntime:
+    def test_new_preemption_policy_returns_request_id(self):
+        selector = BidkvVictimSelector.from_vllm_config(
+            SimpleNamespace(additional_config={"enable_utility_victim_selection": True})
+        )
+        running = (
+            _make_request("r1", num_computed_tokens=200),
+            _make_request("r2", num_computed_tokens=100),
+        )
+        context = SimpleNamespace(
+            candidates=running,
+            scheduling_policy="fcfs",
+            requesting_request_id="r1",
+            kv_cache_usage=1.0,
+            now=10.0,
+        )
+
+        assert selector.select_victim(context) == "r1"
+
     def test_default_non_priority_returns_tail(self):
         from vllm.v1.core.sched.request_queue import SchedulingPolicy
 
-        selector = BidkvVictimSelector.from_vllm_config(
-            SimpleNamespace(additional_config={})
-        )
+        selector = BidkvVictimSelector.from_vllm_config(SimpleNamespace(additional_config={}))
         running = [_make_request("r1"), _make_request("r2"), _make_request("r3")]
         victim = selector.pick_victim(running, SchedulingPolicy.FCFS)
         assert victim.request_id == "r3"
@@ -160,9 +172,7 @@ class TestBidkvVictimSelectorRuntime:
     def test_default_priority_returns_highest_priority(self):
         from vllm.v1.core.sched.request_queue import SchedulingPolicy
 
-        selector = BidkvVictimSelector.from_vllm_config(
-            SimpleNamespace(additional_config={})
-        )
+        selector = BidkvVictimSelector.from_vllm_config(SimpleNamespace(additional_config={}))
         running = [
             _make_request("r1", priority=1, arrival_time=1.0),
             _make_request("r2", priority=3, arrival_time=2.0),
@@ -185,16 +195,25 @@ class TestBidkvVictimSelectorRuntime:
         )
         running = [
             _make_request(
-                "r1", num_computed_tokens=220, output_tokens=12,
-                max_tokens=128, num_preemptions=0,
+                "r1",
+                num_computed_tokens=220,
+                output_tokens=12,
+                max_tokens=128,
+                num_preemptions=0,
             ),
             _make_request(
-                "r2", num_computed_tokens=260, output_tokens=120,
-                max_tokens=128, num_preemptions=3,
+                "r2",
+                num_computed_tokens=260,
+                output_tokens=120,
+                max_tokens=128,
+                num_preemptions=3,
             ),
             _make_request(
-                "r3", num_computed_tokens=180, output_tokens=60,
-                max_tokens=128, num_preemptions=1,
+                "r3",
+                num_computed_tokens=180,
+                output_tokens=60,
+                max_tokens=128,
+                num_preemptions=1,
             ),
         ]
         victim = selector.pick_victim(running, SchedulingPolicy.FCFS)
@@ -204,18 +223,22 @@ class TestBidkvVictimSelectorRuntime:
         from vllm.v1.core.sched.request_queue import SchedulingPolicy
 
         selector = BidkvVictimSelector.from_vllm_config(
-            SimpleNamespace(
-                additional_config={"enable_utility_victim_selection": True}
-            )
+            SimpleNamespace(additional_config={"enable_utility_victim_selection": True})
         )
         running = [
             _make_request(
-                "r1", num_computed_tokens=50, output_tokens=10,
-                max_tokens=None, num_preemptions=0,
+                "r1",
+                num_computed_tokens=50,
+                output_tokens=10,
+                max_tokens=None,
+                num_preemptions=0,
             ),
             _make_request(
-                "r2", num_computed_tokens=70, output_tokens=20,
-                max_tokens=0, num_preemptions=0,
+                "r2",
+                num_computed_tokens=70,
+                output_tokens=20,
+                max_tokens=0,
+                num_preemptions=0,
             ),
         ]
         victim = selector.pick_victim(running, SchedulingPolicy.FCFS)
@@ -248,9 +271,7 @@ class TestBidkvVictimSelectorRuntime:
             )
         )
         running = [_make_request("r1"), _make_request("r2")]
-        victim = selector.pick_victim(
-            running, SchedulingPolicy.FCFS, kv_utilization=0.5
-        )
+        victim = selector.pick_victim(running, SchedulingPolicy.FCFS, kv_utilization=0.5)
         assert victim.request_id == "r2"
 
     def test_kv_gate_allows_utility_when_usage_high(self):
@@ -268,9 +289,7 @@ class TestBidkvVictimSelectorRuntime:
             _make_request("r1", num_computed_tokens=200, output_tokens=10, num_preemptions=0),
             _make_request("r2", num_computed_tokens=120, output_tokens=100, num_preemptions=2),
         ]
-        victim = selector.pick_victim(
-            running, SchedulingPolicy.FCFS, kv_utilization=0.9
-        )
+        victim = selector.pick_victim(running, SchedulingPolicy.FCFS, kv_utilization=0.9)
         assert victim.request_id == "r1"
 
     def test_cooldown_falls_back_to_default_within_window(self):
@@ -372,9 +391,7 @@ class TestBidkvVictimSelectorRuntime:
             _make_request("r1", num_computed_tokens=180, output_tokens=10),
             _make_request("r2", num_computed_tokens=90, output_tokens=80),
         ]
-        selector.pick_victim(
-            running, SchedulingPolicy.FCFS, kv_utilization=1.0, now_s=42.0
-        )
+        selector.pick_victim(running, SchedulingPolicy.FCFS, kv_utilization=1.0, now_s=42.0)
 
         logger = Mock()
         selector.emit_observability_log(logger, "AsyncScheduler")

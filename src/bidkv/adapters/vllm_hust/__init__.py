@@ -1,11 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
-"""BidKV policy implementation for the vLLM-HUST typed scheduler contract.
-
-The main distribution registers a static extension manifest rather than the
-private legacy ``vllm.victim_selector`` entry-point group.
-"""
+"""BidKV implementation for vLLM's immutable preemption-policy contract."""
 
 from bidkv.adapters.vllm_hust.selector import (
+    BidkvPreemptionPolicy,
     BidkvSelectorConfig,
     BidkvVictimSelector,
     UtilityCandidateScore,
@@ -13,6 +10,7 @@ from bidkv.adapters.vllm_hust.selector import (
 
 __all__ = [
     "BidkvSelectorConfig",
+    "BidkvPreemptionPolicy",
     "BidkvVictimSelector",
     "UtilityCandidateScore",
 ]
