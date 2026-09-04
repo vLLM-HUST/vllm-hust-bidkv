@@ -108,7 +108,7 @@ def test_experimental_extension_manifest_matches_native_policy() -> None:
             "contracts": ["vllm.preemption-policy.v1"],
             "execution_planes": ["scheduler"],
             "isolation": "trusted_in_process",
-            "implementation_ref": ("bidkv.adapters.vllm_hust.selector:BidkvPreemptionPolicy"),
+            "implementation_ref": ("bidkv.adapters.vllm_hust.selector.BidkvPreemptionPolicy"),
             "permissions": [],
         }
     ]
@@ -145,7 +145,7 @@ def test_dev_hub_activation_manifest_uses_typed_policy() -> None:
     assert manifest["activation"]["vllm_plugins"] == ["ascend"]
     assert manifest["activation"]["extra_args"][:2] == [
         "--preemption-policy",
-        "bidkv.adapters.vllm_hust.selector:BidkvPreemptionPolicy",
+        "bidkv.adapters.vllm_hust.selector.BidkvPreemptionPolicy",
     ]
 
 

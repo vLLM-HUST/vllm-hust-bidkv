@@ -175,7 +175,7 @@ vllm-hust-ext extension status org.vllm-hust.bidkv
 ```
 
 Manager validates the exact host protocol and renders
-`--preemption-policy bidkv.adapters.vllm_hust.selector:BidkvPreemptionPolicy`.
+`--preemption-policy bidkv.adapters.vllm_hust.selector.BidkvPreemptionPolicy`.
 The controller records calls, selections, abstentions, invalid selections, and
 failures; an invalid result or runtime exception is logged once and permanently
 restores the built-in victim policy for that engine process. Constructor or

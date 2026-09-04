@@ -158,7 +158,7 @@ vllm-hust-ext extension status org.vllm-hust.bidkv
 ```
 
 Manager 会校验精确宿主协议，并渲染
-`--preemption-policy bidkv.adapters.vllm_hust.selector:BidkvPreemptionPolicy`。
+`--preemption-policy bidkv.adapters.vllm_hust.selector.BidkvPreemptionPolicy`。
 控制器记录调用、选择、弃权、非法返回和故障计数；非法返回或运行时异常会明确记日志，
 并在当前 Engine 进程内永久恢复 vLLM 内置策略。构造或配置错误直接阻止启动。
 

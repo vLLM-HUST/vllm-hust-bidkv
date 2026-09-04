@@ -40,7 +40,7 @@
         "scheduler"
       ],
       "isolation": "trusted_in_process",
-      "implementation_ref": "bidkv.adapters.vllm_hust.selector:BidkvPreemptionPolicy",
+      "implementation_ref": "bidkv.adapters.vllm_hust.selector.BidkvPreemptionPolicy",
       "permissions": []
     }
   ],
