@@ -126,8 +126,15 @@ def test_experimental_extension_manifest_matches_native_policy() -> None:
                     "execution_mode": "graph",
                     "model": "Qwen3.8-27B",
                     "tensor_parallel_size": 4,
-                    "status": "incompatible",
-                    "evidence": "docs/evidence/sage-mate-20260905-current-main-tp4-graph.md",
+                    "status": "compatible",
+                    "effectiveness": "runtime-effective-performance-neutral",
+                    "tested_runtime_commit": (
+                        "1462a17b3b5e59865957d7a2226fb2f0578eecb1"
+                    ),
+                    "evidence": (
+                        "docs/evidence/"
+                        "sage-mate-20260905-current-main-tp4-graph-r2.md"
+                    ),
                 },
         },
     }

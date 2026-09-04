@@ -201,16 +201,18 @@ Lifecycle labels are deliberately separate:
 | enabled | Saved operator intent requests BidKV on the next approved launch. |
 | runtime effective | EngineCore logs the exact class and non-zero policy-call counters from a controlled online run. |
 
-The historical pinned lane passed its functional qualification. A fresh run on
-the current vLLM-HUST and vLLM-Ascend-HUST main commits did not pass the
-performance/correctness acceptance gate, so Qwen3.8-27B TP4 graph is currently
-marked **incompatible**. The policy was runtime effective (6 utility decisions
-and 158 liveness fallbacks), cancellation/recovery passed, and short
-deterministic outputs matched. However, it produced 164 preemptions versus 161
-for the built-in policy, reduced output throughput by 2.35%, increased P95 TTFT
-by 2.15%, and the forced 2,048-token pressure outputs did not match the baseline
-hashes. See the
-[current-main qualification record](docs/evidence/sage-mate-20260905-current-main-tp4-graph.md)
+Qwen3.8-27B on the current vLLM-HUST/Ascend-HUST main pair is qualified for
+Ascend TP4 `FULL_DECODE_ONLY` graph mode. Three matched pressure repeats made
+483 policy calls with no failures, completed every request, matched the
+built-in policy's 161 preemptions per run, and showed no extra prompt
+recomputation. Mean throughput was 1.23% higher, but the 95% intervals overlap,
+so the honest effectiveness label is **runtime effective / performance
+neutral**, not a proven speedup. Short deterministic responses matched exactly;
+long pressure output hashes are not an equality gate because repeated built-in
+runs themselves diverged from the first generated tokens under TP4 graph batch
+scheduling. Cancellation drained in one second and exact recovery passed. See
+the [current-main requalification](docs/evidence/sage-mate-20260905-current-main-tp4-graph-r2.md),
+the [superseded failed attempt](docs/evidence/sage-mate-20260905-current-main-tp4-graph.md),
 and the [historical qualification](docs/evidence/sage-mate-20260904-tp4-graph.md).
 
 For a legacy replay that was explicitly enabled, disable the saved intent and
