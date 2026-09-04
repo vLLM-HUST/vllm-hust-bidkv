@@ -37,7 +37,7 @@
     "ruff check .",
     "validate src/bidkv/manifests/vllm-hust-extension-v0.2.json against the experimental Extension schema",
     "verify the main distribution registers no non-upstream vllm.victim_selector entry point",
-    "complete real Qwen3.8 TP4 graph scheduler invocation and next-process rollback before declaring compatibility",
+    "preserve the completed real Qwen3.8 TP4 graph scheduler invocation, output and next-process rollback evidence when changing the candidate",
     "run matched framework experiments before publishing performance claims"
   ],
   "compatibility_document": "README.md#framework-integration-vllm"

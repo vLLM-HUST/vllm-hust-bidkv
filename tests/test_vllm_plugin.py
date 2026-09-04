@@ -122,10 +122,12 @@ def test_experimental_extension_manifest_matches_native_policy() -> None:
         "additional_config": {
             "_manager_runtime_qualification": {
                 "accelerator": "ascend",
-                "execution_mode": "graph",
-                "model": "Qwen3.8-27B",
-                "tensor_parallel_size": 4,
-            },
+                    "execution_mode": "graph",
+                    "model": "Qwen3.8-27B",
+                    "tensor_parallel_size": 4,
+                    "status": "compatible",
+                    "evidence": "docs/evidence/sage-mate-20260904-tp4-graph.md",
+                },
         },
     }
     pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")

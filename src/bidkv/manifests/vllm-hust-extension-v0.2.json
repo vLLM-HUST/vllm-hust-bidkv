@@ -56,7 +56,9 @@
         "accelerator": "ascend",
         "execution_mode": "graph",
         "model": "Qwen3.8-27B",
-        "tensor_parallel_size": 4
+        "tensor_parallel_size": 4,
+        "status": "compatible",
+        "evidence": "docs/evidence/sage-mate-20260904-tp4-graph.md"
       }
     }
   }
