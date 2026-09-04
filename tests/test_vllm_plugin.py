@@ -108,7 +108,7 @@ def test_experimental_extension_manifest_matches_native_policy() -> None:
             "contracts": ["vllm.preemption-policy.v1"],
             "execution_planes": ["scheduler"],
             "isolation": "trusted_in_process",
-            "implementation_ref": ("bidkv.adapters.vllm_hust.selector.BidkvPreemptionPolicy"),
+            "implementation_ref": ("bidkv.adapters.vllm_hust.selector:BidkvPreemptionPolicy"),
             "permissions": [],
         }
     ]
@@ -119,8 +119,6 @@ def test_experimental_extension_manifest_matches_native_policy() -> None:
             "BIDKV_UTILITY_STRATEGY": "bidkv",
         },
         "additional_config": {
-            "enable_utility_victim_selection": True,
-            "utility_strategy": "bidkv",
             "_manager_runtime_qualification": {
                 "accelerator": "ascend",
                 "execution_mode": "graph",

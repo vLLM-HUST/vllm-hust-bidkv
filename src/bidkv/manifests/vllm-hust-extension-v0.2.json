@@ -40,7 +40,7 @@
         "scheduler"
       ],
       "isolation": "trusted_in_process",
-      "implementation_ref": "bidkv.adapters.vllm_hust.selector.BidkvPreemptionPolicy",
+      "implementation_ref": "bidkv.adapters.vllm_hust.selector:BidkvPreemptionPolicy",
       "permissions": []
     }
   ],
@@ -51,8 +51,6 @@
       "BIDKV_UTILITY_STRATEGY": "bidkv"
     },
     "additional_config": {
-      "enable_utility_victim_selection": true,
-      "utility_strategy": "bidkv",
       "_manager_runtime_qualification": {
         "accelerator": "ascend",
         "execution_mode": "graph",

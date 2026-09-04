@@ -21,12 +21,7 @@
     ],
     "extra_args": [
       "--preemption-policy",
-      "bidkv.adapters.vllm_hust.selector.BidkvPreemptionPolicy",
-      "--additional-config",
-      {
-        "enable_utility_victim_selection": true,
-        "utility_strategy": "bidkv"
-      }
+      "bidkv.adapters.vllm_hust.selector.BidkvPreemptionPolicy"
     ]
   },
   "compatibility": {
