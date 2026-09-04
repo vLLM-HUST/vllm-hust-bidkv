@@ -181,6 +181,12 @@ failures; an invalid result or runtime exception is logged once and permanently
 restores the built-in victim policy for that engine process. Constructor or
 configuration errors fail startup.
 
+BidKV also has a forward-progress guard. If every runnable request has already
+been preempted at least `BIDKV_UTILITY_LIVENESS_PREEMPTIONS` times (default 2),
+it records `LIVENESS_FALLBACK` and uses vLLM's stable default victim order for
+that decision. Set the value to `0` only to disable this guard for controlled
+experiments.
+
 Lifecycle labels are deliberately separate:
 
 | Label | Meaning |
@@ -190,10 +196,13 @@ Lifecycle labels are deliberately separate:
 | enabled | Saved operator intent requests BidKV on the next approved launch. |
 | runtime effective | EngineCore logs the exact class and non-zero policy-call counters from a controlled online run. |
 
-CPU contract and scheduler-path tests pass on the pinned source. Real Qwen3.8
-TP4 graph-mode qualification on independent hardware is still pending, so this
-revision must remain **unverified**, not `compatible`, until that evidence is
-attached.
+CPU contract and scheduler-path tests pass on the pinned source. A real
+Qwen3.8-27B TP4 graph-mode run proved policy initialization, non-zero policy
+calls, exact-output recovery after cancellation, and baseline rollback. Its
+first deliberately overcommitted pressure workload exposed rotating victims;
+the forward-progress guard above was added as a result and still requires a
+fresh convergent pressure rerun. This revision therefore remains
+**unverified**, not `compatible`.
 
 For a legacy replay that was explicitly enabled, disable the saved intent and
 start a fresh vLLM process to roll back:

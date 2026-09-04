@@ -117,6 +117,7 @@ def test_experimental_extension_manifest_matches_native_policy() -> None:
         "environment": {
             "BIDKV_UTILITY_ENABLE": "1",
             "BIDKV_UTILITY_STRATEGY": "bidkv",
+            "BIDKV_UTILITY_LIVENESS_PREEMPTIONS": "2",
         },
         "additional_config": {
             "_manager_runtime_qualification": {

@@ -56,12 +56,15 @@ class TestBidkvSelectorConfig:
         assert config.utility_completion_weight == 0.5
         assert config.utility_preempt_weight == 0.3
         assert config.utility_kv_gate == 0.0
+        assert config.utility_liveness_preemptions == 2
 
     def test_validate_raises_on_negative_weights(self):
         with pytest.raises(ValueError):
             BidkvSelectorConfig(utility_completion_weight=-1).validate()
         with pytest.raises(ValueError):
             BidkvSelectorConfig(utility_preempt_weight=-1).validate()
+        with pytest.raises(ValueError):
+            BidkvSelectorConfig(utility_liveness_preemptions=-1).validate()
 
     def test_validate_raises_on_invalid_kv_gate(self):
         with pytest.raises(ValueError):
@@ -131,6 +134,26 @@ class TestBidkvVictimSelectorConstruction:
         assert metrics["total_preemptions"] == 0
         assert metrics["total_tokens_freed"] == 0
         assert metrics["kv_pressure_events"] == 0
+
+
+def test_liveness_fallback_without_vllm_runtime() -> None:
+    selector = BidkvVictimSelector(
+        BidkvSelectorConfig(
+            enable_utility_victim_selection=True,
+            utility_liveness_preemptions=2,
+        )
+    )
+    running = [
+        _make_request("r1", num_computed_tokens=300, num_preemptions=2),
+        _make_request("r2", num_computed_tokens=200, num_preemptions=4),
+        _make_request("r3", num_computed_tokens=100, num_preemptions=3),
+    ]
+
+    victim = selector.pick_victim(running, "fcfs", kv_utilization=1.0)
+
+    assert victim.request_id == "r3"
+    assert selector.export_metrics()["liveness_fallback_hits"] == 1
+    assert selector._last_decision["decision_reason"] == "liveness_fallback"
 
 
 # ---------------------------------------------------------------------------
@@ -243,6 +266,54 @@ class TestBidkvVictimSelectorRuntime:
         ]
         victim = selector.pick_victim(running, SchedulingPolicy.FCFS)
         assert victim.request_id in {"r1", "r2"}
+
+    def test_liveness_fallback_restores_stable_default_order(self):
+        from vllm.v1.core.sched.request_queue import SchedulingPolicy
+
+        selector = BidkvVictimSelector.from_vllm_config(
+            SimpleNamespace(
+                additional_config={
+                    "enable_utility_victim_selection": True,
+                    "utility_liveness_preemptions": 2,
+                }
+            )
+        )
+        running = [
+            _make_request("r1", num_computed_tokens=300, num_preemptions=2),
+            _make_request("r2", num_computed_tokens=200, num_preemptions=4),
+            _make_request("r3", num_computed_tokens=100, num_preemptions=3),
+        ]
+
+        victim = selector.pick_victim(running, SchedulingPolicy.FCFS, kv_utilization=1.0)
+
+        assert victim.request_id == "r3"
+        metrics = selector.export_metrics()
+        assert metrics["liveness_fallback_hits"] == 1
+        assert metrics["utility_strategy_hits"] == 0
+        assert metrics["default_strategy_hits"] == 1
+        assert selector._last_decision["decision_reason"] == "liveness_fallback"
+
+    def test_liveness_fallback_waits_until_every_candidate_repeated(self):
+        from vllm.v1.core.sched.request_queue import SchedulingPolicy
+
+        selector = BidkvVictimSelector.from_vllm_config(
+            SimpleNamespace(
+                additional_config={
+                    "enable_utility_victim_selection": True,
+                    "utility_liveness_preemptions": 2,
+                }
+            )
+        )
+        running = [
+            _make_request("r1", num_computed_tokens=300, num_preemptions=2),
+            _make_request("r2", num_computed_tokens=200, num_preemptions=1),
+            _make_request("r3", num_computed_tokens=100, num_preemptions=4),
+        ]
+
+        victim = selector.pick_victim(running, SchedulingPolicy.FCFS, kv_utilization=1.0)
+
+        assert victim.request_id == "r1"
+        assert selector.export_metrics()["liveness_fallback_hits"] == 0
 
     def test_kill_switch_falls_back_to_default(self):
         from vllm.v1.core.sched.request_queue import SchedulingPolicy

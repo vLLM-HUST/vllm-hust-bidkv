@@ -71,6 +71,7 @@ class BidkvSelectorConfig:
     utility_kv_gate: float = 0.0
     utility_cooldown_s: float = 0.0
     utility_min_running: int = 1
+    utility_liveness_preemptions: int = 2
     utility_snapshot_enabled: bool = False
     utility_snapshot_top_k: int = 3
     utility_snapshot_history_size: int = 32
@@ -88,6 +89,9 @@ class BidkvSelectorConfig:
             utility_kv_gate=_env_float("BIDKV_UTILITY_KV_GATE", "0.0"),
             utility_cooldown_s=_env_float("BIDKV_UTILITY_COOLDOWN_S", "0.0"),
             utility_min_running=_env_int("BIDKV_UTILITY_MIN_RUNNING", "1"),
+            utility_liveness_preemptions=_env_int(
+                "BIDKV_UTILITY_LIVENESS_PREEMPTIONS", "2"
+            ),
             utility_snapshot_enabled=_env_bool("BIDKV_UTILITY_SNAPSHOT_ENABLED"),
             utility_snapshot_top_k=_env_int("BIDKV_UTILITY_SNAPSHOT_TOP_K", "3"),
             utility_snapshot_history_size=_env_int("BIDKV_UTILITY_SNAPSHOT_HISTORY_SIZE", "32"),
@@ -137,6 +141,12 @@ class BidkvSelectorConfig:
             utility_min_running=int(
                 config_data.get("utility_min_running", defaults.utility_min_running)
             ),
+            utility_liveness_preemptions=int(
+                config_data.get(
+                    "utility_liveness_preemptions",
+                    defaults.utility_liveness_preemptions,
+                )
+            ),
             utility_snapshot_enabled=bool(
                 config_data.get(
                     "utility_snapshot_enabled",
@@ -182,6 +192,8 @@ class BidkvSelectorConfig:
             raise ValueError("utility_cooldown_s must be non-negative")
         if self.utility_min_running <= 0:
             raise ValueError("utility_min_running must be positive")
+        if self.utility_liveness_preemptions < 0:
+            raise ValueError("utility_liveness_preemptions must be non-negative")
         if self.utility_snapshot_top_k <= 0:
             raise ValueError("utility_snapshot_top_k must be positive")
         if self.utility_snapshot_history_size <= 0:
@@ -201,6 +213,7 @@ class BidkvSelectorConfig:
             "utility_kv_gate": self.utility_kv_gate,
             "utility_cooldown_s": self.utility_cooldown_s,
             "utility_min_running": self.utility_min_running,
+            "utility_liveness_preemptions": self.utility_liveness_preemptions,
             "utility_snapshot_enabled": self.utility_snapshot_enabled,
             "utility_snapshot_top_k": self.utility_snapshot_top_k,
             "utility_snapshot_history_size": self.utility_snapshot_history_size,
@@ -259,6 +272,7 @@ class BidkvPreemptionPolicy:
         self._kv_pressure_events = 0
         self._utility_strategy_hits = 0
         self._default_strategy_hits = 0
+        self._liveness_fallback_hits = 0
         self._consecutive_preemption_events = 0
         self._consecutive_preemption_checks = 0
         self._last_preempted_request_id: str | None = None
@@ -268,13 +282,14 @@ class BidkvPreemptionPolicy:
         self._decision_snapshots: deque[dict[str, Any]] = deque(maxlen=snapshot_size)
         logging.getLogger("vllm").info(
             "[BidKV] INIT | enabled=%s | strategy=%s | kv_gate=%.2f | min_running=%d | "
-            "completion_w=%.2f | preempt_w=%.2f",
+            "completion_w=%.2f | preempt_w=%.2f | liveness_preemptions=%d",
             self.config.enable_utility_victim_selection,
             self.config.utility_strategy,
             self.config.utility_kv_gate,
             self.config.utility_min_running,
             self.config.utility_completion_weight,
             self.config.utility_preempt_weight,
+            self.config.utility_liveness_preemptions,
         )
 
     # -- Factory (PreemptionPolicy protocol) ------------------------------
@@ -390,6 +405,7 @@ class BidkvPreemptionPolicy:
             "strategy_hit_rate": hit_rate,
             "utility_strategy_hits": self._utility_strategy_hits,
             "default_strategy_hits": self._default_strategy_hits,
+            "liveness_fallback_hits": self._liveness_fallback_hits,
         }
 
     def get_recent_snapshots(self, limit: int = 10) -> list[dict[str, Any]]:
@@ -503,6 +519,46 @@ class BidkvPreemptionPolicy:
             return victim
 
         ranked_candidates, req_map = self._rank_candidates(running)
+        liveness_threshold = self.config.utility_liveness_preemptions
+        if (
+            liveness_threshold > 0
+            and len(ranked_candidates) > 1
+            and all(
+                candidate.num_preemptions >= liveness_threshold
+                for candidate in ranked_candidates
+            )
+        ):
+            # Utility maximisation can rotate every request under sustained KV
+            # overcommit: recomputation lowers the last victim's reward and
+            # makes another request the next victim. Once every runnable
+            # request has already paid the configured recomputation cost,
+            # restore the scheduler's stable default order so a request can
+            # make forward progress. A newly admitted request (preemptions=0)
+            # automatically re-enables utility selection.
+            victim = default_victim
+            self._liveness_fallback_hits += 1
+            logging.getLogger("vllm").warning(
+                "[BidKV] LIVENESS_FALLBACK | victim=%s (default) | "
+                "threshold=%d | min_preemptions=%d | kv_util=%.2f | running=%d",
+                victim.request_id,
+                liveness_threshold,
+                min(candidate.num_preemptions for candidate in ranked_candidates),
+                kv_utilization or 0.0,
+                len(running),
+            )
+            self._record_preemption(
+                victim=victim,
+                used_utility=False,
+                policy=policy,
+                kv_utilization=kv_utilization,
+                now_s=now,
+                default_victim=default_victim,
+                ranked_candidates=ranked_candidates,
+                running_size=len(running),
+                decision_reason="liveness_fallback",
+            )
+            return victim
+
         top = ranked_candidates[0]
         victim = req_map[top.request_id]
         self._last_utility_pick_ts = now
@@ -644,6 +700,7 @@ class BidkvPreemptionPolicy:
         default_victim: _Candidate,
         ranked_candidates: Sequence[UtilityCandidateScore],
         running_size: int,
+        decision_reason: str = "strategy",
     ) -> None:
         request_id = str(getattr(victim, "request_id", ""))
         tokens_freed = max(int(getattr(victim, "num_computed_tokens", 0) or 0), 0)
@@ -674,6 +731,7 @@ class BidkvPreemptionPolicy:
             "running_size": running_size,
             "selected_victim_id": request_id,
             "default_victim_id": default_id,
+            "decision_reason": decision_reason,
         }
         if self.config.utility_snapshot_enabled:
             top_k = max(1, int(self.config.utility_snapshot_top_k))
