@@ -156,7 +156,7 @@ def test_liveness_fallback_without_vllm_runtime() -> None:
 
     assert victim.request_id == "r3"
     assert selector.export_metrics()["liveness_fallback_hits"] == 1
-    assert selector._last_decision["decision_reason"] == "liveness_fallback"
+    assert selector._last_decision["decision_reason"] == "liveness_abstain"
 
 
 def test_liveness_guard_is_an_epoch_not_a_permanent_fallback() -> None:
@@ -178,8 +178,9 @@ def test_liveness_guard_is_an_epoch_not_a_permanent_fallback() -> None:
         kv_cache_usage=1.0,
         now=1.0,
     )
-    assert selector.select_victim(context) == "r2"
+    assert selector.select_victim(context) is None
     assert selector.export_metrics()["liveness_fallback_hits"] == 1
+    assert selector.export_metrics()["policy_abstentions"] == 1
 
     # Unchanged cumulative counts are below the new epoch-relative threshold,
     # so utility immediately becomes active again.
@@ -222,8 +223,10 @@ def test_requester_guard_avoids_marginal_multi_victim_cascade() -> None:
         now=1.0,
     )
 
-    assert selector.select_victim(context) == "requester"
+    assert selector.select_victim(context) is None
     assert selector.export_metrics()["cascade_guard_hits"] == 1
+    assert selector.export_metrics()["policy_abstentions"] == 1
+    assert selector._last_decision["decision_reason"] == "cascade_abstain"
 
 
 def test_requester_guard_keeps_material_utility_gain() -> None:
@@ -249,7 +252,7 @@ def test_requester_guard_keeps_material_utility_gain() -> None:
     assert selector.export_metrics()["cascade_guard_hits"] == 0
 
 
-def test_sustained_pressure_trace_stays_bounded_and_utility_active() -> None:
+def test_sustained_pressure_trace_abstains_and_keeps_utility_active() -> None:
     selector = BidkvVictimSelector(
         BidkvSelectorConfig(
             enable_utility_victim_selection=True,
@@ -278,13 +281,16 @@ def test_sustained_pressure_trace_stays_bounded_and_utility_active() -> None:
                 now=float(step),
             )
         )
-        counts[victim] += 1
-        selected[victim] += 1
+        selected_id = victim or candidates[-1].request_id
+        counts[selected_id] += 1
+        selected[selected_id] += 1
 
     metrics = selector.export_metrics()
-    assert metrics["utility_strategy_hits"] / metrics["total_preemptions"] >= 0.75
+    assert 0 < metrics["utility_strategy_hits"] < metrics["total_preemptions"]
+    assert metrics["policy_abstentions"] == metrics["default_strategy_hits"]
     assert metrics["liveness_fallback_hits"] > 0
-    assert max(selected.values()) - min(selected.values()) <= 2
+    assert abs(selected["r0"] - selected["r1"]) <= 2
+    assert selected["r2"] > 0
 
 
 # ---------------------------------------------------------------------------
@@ -422,9 +428,9 @@ class TestBidkvVictimSelectorRuntime:
         assert metrics["liveness_fallback_hits"] == 1
         assert metrics["utility_strategy_hits"] == 0
         assert metrics["default_strategy_hits"] == 1
-        assert selector._last_decision["decision_reason"] == "liveness_fallback"
+        assert selector._last_decision["decision_reason"] == "liveness_abstain"
 
-    def test_liveness_fallback_waits_until_every_candidate_repeated(self):
+    def test_liveness_fallback_triggers_when_top_candidate_repeats(self):
         from vllm.v1.core.sched.request_queue import SchedulingPolicy
 
         selector = BidkvVictimSelector.from_vllm_config(
@@ -443,8 +449,8 @@ class TestBidkvVictimSelectorRuntime:
 
         victim = selector.pick_victim(running, SchedulingPolicy.FCFS, kv_utilization=1.0)
 
-        assert victim.request_id == "r1"
-        assert selector.export_metrics()["liveness_fallback_hits"] == 0
+        assert victim.request_id == "r3"
+        assert selector.export_metrics()["liveness_fallback_hits"] == 1
 
     def test_kill_switch_falls_back_to_default(self):
         from vllm.v1.core.sched.request_queue import SchedulingPolicy
