@@ -140,12 +140,11 @@ import BidKV，也不会启用调度行为。
 Manifest 0.2 不构成兼容性承诺；三类 Host Provider 验收全部通过前，不能把它
 作为稳定 Bundle v1 契约发布。
 
-> **宿主边界：** 当前固定 vLLM-HUST 目标支持 `vllm.preemption-policy.v1`；
-> 官方 vLLM 尚未提供该契约。上游方向是 RFC
-> [#51608](https://github.com/vllm-project/vllm/issues/51608) 和 draft PR
-> [#51601](https://github.com/vllm-project/vllm/pull/51601)，其目标
-> `vllm.scheduler_plugins`/PreemptionScore 契约尚未冻结。HUST 的接口保持最小、
-> 通用且不包含 BidKV 名称；不能据此宣称兼容官方 vLLM。
+> **宿主边界：** 通用契约由 `vLLM-HUST` 组织维护；安全 abstain 与内置 victim
+> 语义已通过
+> [vLLM-HUST/vllm-hust#11](https://github.com/vLLM-HUST/vllm-hust/pull/11)
+> 合入组织 `main`。本轮资格测试明确没有向 `vllm-project/vllm` 提交；对该项目
+> scheduler 工作的引用只作为背景，不构成发布门禁或兼容性声明。
 
 具体的语义映射、draft 代码与设计文档差异以及迁移门禁见
 [上游 scheduler 契约差距](docs/upstream-scheduler-contract-gap.md)。
@@ -179,13 +178,20 @@ victim），随后推进每请求 offset 并立即恢复效用选择，避免旧
 | enabled | 已保存“下次获批启动启用 BidKV”的运维意图。 |
 | runtime effective | 受控在线运行日志确认精确策略类，且调用计数非零。 |
 
-历史固定通道通过了功能资格验证；但在当前 vLLM-HUST 与
-vLLM-Ascend-HUST main 上重新执行真实硬件验收后，性能/正确性门槛没有通过，因此
-Qwen3.8-27B TP4 graph 当前标记为 **incompatible**。策略确实 runtime effective
-（6 次效用决策、158 次前进保护回退），取消/恢复通过，短确定性输出也与基线一致；
-但实际抢占为 164 次，高于内置策略的 161 次，输出吞吐下降 2.35%，P95 TTFT
-上升 2.15%，且强制 2,048-token 压力输出的哈希与基线不一致。详见
-[当前 main 资格记录](docs/evidence/sage-mate-20260905-current-main-tp4-graph.md)与
+当前 vLLM-HUST / vLLM-Ascend-HUST 资格组合上的 Qwen3.8-27B 已通过 Ascend TP4
+`FULL_DECODE_ONLY` graph 的**功能兼容性**门禁。该结论不代表任意当前实例已经安装、
+配置、启用或运行生效。五类功能单元与两类三轮交替 A/B 均无策略失败、非法选择、
+graph 失败或 traceback。ascending mixed 中两轮真实调用各 63 次，并与基线同为
+63 次抢占，旧实现 -57.79% 的吞吐雪崩已消除；但另一次未触发策略，因此该单元为
+**inconclusive**。interactive concurrency=8 单元则为
+**not-beneficial-in-tested-cell**：吞吐变化均值 -25.31%（95% CI -26.66% 至
+-23.96%），P95 延迟变化均值 +34.57%（95% CI +31.96% 至 +37.17%）。这些都是
+逐单元结论，不能外推成整个 Mod 的效果或兼容性结论。长压力输出在
+baseline 对 baseline 重复中也发生分歧，需作为 TP4 graph 数值/调度确定性问题继续
+分析，不能归因成 BidKV 兼容性失败。详见
+[bounded-preemption 矩阵](docs/evidence/sage-mate-20260905-bounded-preemption-matrix.md)、
+[较早的当前 main 三轮资格记录](docs/evidence/sage-mate-20260905-current-main-tp4-graph-r2.md)、
+[已纠正解释的单轮记录](docs/evidence/sage-mate-20260905-current-main-tp4-graph.md)与
 [历史资格记录](docs/evidence/sage-mate-20260904-tp4-graph.md)。
 
 如果旧回放曾被显式启用，回退时停用保存的意图并启动一个新的 vLLM 进程：

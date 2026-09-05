@@ -155,14 +155,12 @@ scheduling behavior.
 Manifest 0.2 is not a compatibility promise and must not be published as a
 stable Bundle v1 contract before all three host-provider acceptance gates pass.
 
-> **Host boundary:** the pinned vLLM-HUST target supports
-> `vllm.preemption-policy.v1`; official vLLM does not yet expose this contract.
-> The upstream direction is RFC
-> [#51608](https://github.com/vllm-project/vllm/issues/51608) and draft PR
-> [#51601](https://github.com/vllm-project/vllm/pull/51601), whose target
-> `vllm.scheduler_plugins`/PreemptionScore contract is not frozen. The HUST
-> interface stays minimal, generic, and free of BidKV names; it is not evidence
-> of compatibility with official vLLM.
+> **Host boundary:** the generic contract is maintained in the `vLLM-HUST`
+> organization. Its abstention and built-in-victim semantics were hardened and
+> merged through [vLLM-HUST/vllm-hust#11](https://github.com/vLLM-HUST/vllm-hust/pull/11).
+> This qualification campaign intentionally did not submit to
+> `vllm-project/vllm`; references to that project's scheduler work are context,
+> not a publication or compatibility claim.
 
 The exact semantic mapping, draft code/design mismatch, and migration gates
 are tracked in [the upstream scheduler contract gap](docs/upstream-scheduler-contract-gap.md).
@@ -201,17 +199,25 @@ Lifecycle labels are deliberately separate:
 | enabled | Saved operator intent requests BidKV on the next approved launch. |
 | runtime effective | EngineCore logs the exact class and non-zero policy-call counters from a controlled online run. |
 
-Qwen3.8-27B on the current vLLM-HUST/Ascend-HUST main pair is qualified for
-Ascend TP4 `FULL_DECODE_ONLY` graph mode. Three matched pressure repeats made
-483 policy calls with no failures, completed every request, matched the
-built-in policy's 161 preemptions per run, and showed no extra prompt
-recomputation. Mean throughput was 1.23% higher, but the 95% intervals overlap,
-so the honest effectiveness label is **runtime effective / performance
-neutral**, not a proven speedup. Short deterministic responses matched exactly;
+Qwen3.8-27B on the current vLLM-HUST/Ascend-HUST qualification pair has passed
+the functional compatibility gate for Ascend TP4 `FULL_DECODE_ONLY` graph
+mode. That statement is independent of whether BidKV is installed, configured,
+enabled, or runtime-effective on any particular live instance. A five-cell
+functional matrix and two alternating three-repeat cells completed every
+request with no policy failure, invalid selection, graph failure, or traceback.
+In the adversarial ascending-mixed cell, the two repeats that invoked the
+policy made 63 calls each and matched the built-in arm's 63 preemptions; the old
+-57.79% throughput collapse was eliminated. That cell is **inconclusive**
+because one repeat did not invoke the policy. The interactive concurrency-eight
+cell is **not-beneficial-in-tested-cell**: throughput delta mean -25.31% (95% CI
+-26.66% to -23.96%) and P95 latency delta mean +34.57% (95% CI +31.96% to
++37.17%). These are scoped effectiveness results, not a whole-Mod verdict.
+Short deterministic responses matched exactly;
 long pressure output hashes are not an equality gate because repeated built-in
 runs themselves diverged from the first generated tokens under TP4 graph batch
 scheduling. Cancellation drained in one second and exact recovery passed. See
-the [current-main requalification](docs/evidence/sage-mate-20260905-current-main-tp4-graph-r2.md),
+the [bounded-preemption matrix](docs/evidence/sage-mate-20260905-bounded-preemption-matrix.md),
+the [earlier current-main requalification](docs/evidence/sage-mate-20260905-current-main-tp4-graph-r2.md),
 the [superseded failed attempt](docs/evidence/sage-mate-20260905-current-main-tp4-graph.md),
 and the [historical qualification](docs/evidence/sage-mate-20260904-tp4-graph.md).
 

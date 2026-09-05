@@ -123,19 +123,38 @@ def test_experimental_extension_manifest_matches_native_policy() -> None:
         "additional_config": {
             "_manager_runtime_qualification": {
                 "accelerator": "ascend",
-                    "execution_mode": "graph",
-                    "model": "Qwen3.8-27B",
-                    "tensor_parallel_size": 4,
-                    "status": "compatible",
-                    "effectiveness": "runtime-effective-performance-neutral",
-                    "tested_runtime_commit": (
-                        "1462a17b3b5e59865957d7a2226fb2f0578eecb1"
-                    ),
-                    "evidence": (
-                        "docs/evidence/"
-                        "sage-mate-20260905-current-main-tp4-graph-r2.md"
-                    ),
+                "execution_mode": "graph",
+                "model": "Qwen3.8-27B",
+                "tensor_parallel_size": 4,
+                "functional_compatibility": {
+                    "status": "passed",
+                    "scope": "Qwen3.8-27B / Ascend TP4 / FULL_DECODE_ONLY graph",
                 },
+                "effectiveness_qualifications": [
+                    {
+                        "status": "inconclusive",
+                        "scope": "ascending mixed / concurrency=4 / 1-GiB KV pressure / n=3",
+                        "reason": (
+                            "The policy was not invoked in every repeat and the "
+                            "paired intervals overlap."
+                        ),
+                    },
+                    {
+                        "status": "not-beneficial-in-tested-cell",
+                        "scope": "interactive batch / concurrency=8 / 1-GiB KV pressure / n=3",
+                        "reason": (
+                            "Throughput delta mean -25.31% (95% CI -26.66% to "
+                            "-23.96%); P95 latency delta mean +34.57% (95% CI "
+                            "+31.96% to +37.17%)."
+                        ),
+                    },
+                ],
+                "runtime_state_source": "live_instance_observation_only",
+                "tested_runtime_commit": (
+                    "199e0bdc6fc38fc9b14b626515efdcbf81de0b62"
+                ),
+                "evidence": "docs/evidence/sage-mate-20260905-bounded-preemption-matrix.md",
+            },
         },
     }
     pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")

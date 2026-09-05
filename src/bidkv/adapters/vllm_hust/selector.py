@@ -288,6 +288,7 @@ class BidkvPreemptionPolicy:
         self._liveness_fallback_hits = 0
         self._liveness_epochs = 0
         self._cascade_guard_hits = 0
+        self._policy_abstentions = 0
         self._liveness_preemption_offsets: dict[str, int] = {}
         self._consecutive_preemption_events = 0
         self._consecutive_preemption_checks = 0
@@ -318,7 +319,7 @@ class BidkvPreemptionPolicy:
 
     # -- Public API (PreemptionPolicy protocol) ----------------------------
 
-    def select_victim(self, context: PreemptionContext) -> str:
+    def select_victim(self, context: PreemptionContext) -> str | None:
         running = context.candidates
         if not running:
             raise ValueError("running is empty, cannot pick victim")
@@ -342,7 +343,7 @@ class BidkvPreemptionPolicy:
             victim = self._pick_largest_first_victim(running, policy, kv_utilization, now)
         else:
             victim = self._pick_pe_victim(running, policy, kv_utilization, now)
-        return victim.request_id
+        return None if victim is None else victim.request_id
 
     def pick_victim(
         self,
@@ -363,6 +364,8 @@ class BidkvPreemptionPolicy:
             now=self._resolve_now(now_s),
         )
         selected_id = self.select_victim(context)  # type: ignore[arg-type]
+        if selected_id is None:
+            return self._pick_default_victim(running, policy_value)
         return next(candidate for candidate in running if candidate.request_id == selected_id)
 
     def emit_observability_log(self, logger, scheduler_name: str) -> None:
@@ -432,6 +435,7 @@ class BidkvPreemptionPolicy:
             "liveness_fallback_hits": self._liveness_fallback_hits,
             "liveness_epochs": self._liveness_epochs,
             "cascade_guard_hits": self._cascade_guard_hits,
+            "policy_abstentions": self._policy_abstentions,
         }
 
     def get_recent_snapshots(self, limit: int = 10) -> list[dict[str, Any]]:
@@ -505,7 +509,7 @@ class BidkvPreemptionPolicy:
         kv_utilization,
         now,
         requesting_request_id: str,
-    ) -> _Candidate:
+    ) -> _Candidate | None:
         if (
             self.config.utility_kv_gate > 0
             and kv_utilization is not None
@@ -553,48 +557,36 @@ class BidkvPreemptionPolicy:
 
         ranked_candidates, req_map = self._rank_candidates(running)
         liveness_threshold = self.config.utility_liveness_preemptions
-        relative_preemptions = {
-            candidate.request_id: max(
-                0,
-                candidate.num_preemptions
-                - self._liveness_preemption_offsets.get(candidate.request_id, 0),
-            )
-            for candidate in ranked_candidates
-        }
-        if (
-            liveness_threshold > 0
-            and len(ranked_candidates) > 1
-            and all(
-                relative_preemptions[candidate.request_id] >= liveness_threshold
-                for candidate in ranked_candidates
-            )
-        ):
-            # Bound utility rotation without permanently disabling utility.
-            # This is an epoch barrier: one self/default decision lets the
-            # current scheduling pass stop cascading, then offsets advance so
-            # subsequent pressure decisions return to utility ranking. A new
-            # barrier is possible only after every still-runnable request has
-            # paid another bounded number of preemptions.
-            victim = req_map.get(requesting_request_id, default_victim)
+        top = ranked_candidates[0]
+        top_relative_preemptions = max(
+            0,
+            top.num_preemptions
+            - self._liveness_preemption_offsets.get(top.request_id, 0),
+        )
+        if liveness_threshold > 0 and top_relative_preemptions >= liveness_threshold:
+            # A per-victim bound is required here. Requiring every runnable
+            # request to reach the threshold never fires when utility keeps
+            # choosing one large request, which can turn recomputation into an
+            # unbounded loop. Abstaining delegates to vLLM's built-in policy.
             self._liveness_fallback_hits += 1
             self._liveness_epochs += 1
-            for candidate in ranked_candidates:
-                self._liveness_preemption_offsets[candidate.request_id] = (
-                    candidate.num_preemptions
-                )
+            self._policy_abstentions += 1
+            self._liveness_preemption_offsets[top.request_id] = top.num_preemptions
             logging.getLogger("vllm").warning(
-                "[BidKV] LIVENESS_FALLBACK | victim=%s (progress barrier) | "
-                "threshold=%d | epoch=%d | min_relative_preemptions=%d | "
+                "[BidKV] LIVENESS_ABSTAIN | utility_victim=%s | "
+                "builtin_victim=%s | threshold=%d | epoch=%d | "
+                "relative_preemptions=%d | "
                 "kv_util=%.2f | running=%d",
-                victim.request_id,
+                top.request_id,
+                default_victim.request_id,
                 liveness_threshold,
                 self._liveness_epochs,
-                min(relative_preemptions.values()),
+                top_relative_preemptions,
                 kv_utilization or 0.0,
                 len(running),
             )
             self._record_preemption(
-                victim=victim,
+                victim=default_victim,
                 used_utility=False,
                 policy=policy,
                 kv_utilization=kv_utilization,
@@ -602,11 +594,10 @@ class BidkvPreemptionPolicy:
                 default_victim=default_victim,
                 ranked_candidates=ranked_candidates,
                 running_size=len(running),
-                decision_reason="liveness_fallback",
+                decision_reason="liveness_abstain",
             )
-            return victim
+            return None
 
-        top = ranked_candidates[0]
         cascade_guard_used = False
         requester = next(
             (
@@ -622,13 +613,36 @@ class BidkvPreemptionPolicy:
             and requester.tokens_freed * self.config.utility_cascade_gain_ratio
             >= top.tokens_freed
         ):
-            # Preempting the request whose allocation failed stops the Core
-            # loop after one victim. Prefer that bounded choice unless another
-            # request frees materially more KV; this avoids multi-victim
-            # cascades while retaining utility ranking when its gain is real.
-            top = requester
+            # A marginal gain is not worth changing the scheduler's stable
+            # progress order. Selecting the requesting request here can reset
+            # its KV and make it immediately retry forever. Abstain so the
+            # controller applies the built-in victim choice atomically.
             self._cascade_guard_hits += 1
+            self._policy_abstentions += 1
             cascade_guard_used = True
+            logging.getLogger("vllm").info(
+                "[BidKV] CASCADE_ABSTAIN | utility_victim=%s | "
+                "builtin_victim=%s | requester=%s | gain_ratio=%.2f | "
+                "kv_util=%.2f | running=%d",
+                top.request_id,
+                default_victim.request_id,
+                requester.request_id,
+                self.config.utility_cascade_gain_ratio,
+                kv_utilization or 0.0,
+                len(running),
+            )
+            self._record_preemption(
+                victim=default_victim,
+                used_utility=False,
+                policy=policy,
+                kv_utilization=kv_utilization,
+                now_s=now,
+                default_victim=default_victim,
+                ranked_candidates=ranked_candidates,
+                running_size=len(running),
+                decision_reason="cascade_abstain",
+            )
+            return None
         victim = req_map[top.request_id]
         self._last_utility_pick_ts = now
         logging.getLogger("vllm").info(
