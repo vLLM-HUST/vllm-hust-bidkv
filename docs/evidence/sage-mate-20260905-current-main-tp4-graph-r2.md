@@ -2,8 +2,11 @@
 
 ## Verdict and immutable inputs
 
-BidKV passes the functional compatibility gate on this exact lane and is
-classified **runtime effective / performance neutral**:
+BidKV passes the functional compatibility gate on this exact lane. The
+effectiveness result for the tested homogeneous-long pressure cell is
+**inconclusive**; this is not a whole-Mod performance classification. Runtime
+effectiveness below applies only to the observed candidate processes, not to
+the current state of another installation:
 
 - vLLM-HUST `a4d6aa022fb1885a25a802a6e29372c81eac6c9f`
   (`0.28.1rc1.dev391+ga4d6aa022`)
@@ -37,9 +40,9 @@ tokens per request. Every request completed without starvation.
 | P95 latency | 292.388 s | 288.348 s | -1.38% |
 | Jain output-rate fairness | 0.995896 | 0.995692 | -0.02% |
 
-All 95% Student-t intervals overlap. The run therefore proves no measured
-regression and real policy execution, but not a statistically separated
-speedup. Local-compute prompt-token deltas exactly matched client prompt tokens
+All 95% Student-t intervals overlap. The run therefore proves real policy
+execution but does not statistically distinguish benefit from regression in
+this cell. Local-compute prompt-token deltas exactly matched client prompt tokens
 in all runs, so no additional recomputation was observed.
 
 ## Correctness, liveness, cancellation, and rollback

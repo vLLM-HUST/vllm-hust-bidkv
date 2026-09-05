@@ -1,8 +1,15 @@
 # Sage Mate current-main Qwen3.8-27B TP4 graph qualification — 2026-09-05
 
-## Verdict and immutable inputs
+## Superseded interpretation and immutable inputs
 
-BidKV does **not** pass the compatibility gate on this exact current-main lane:
+This record preserves the first single-run measurement, but its original
+compatibility conclusion was invalid. The run proved functional execution,
+cancellation/recovery and rollback. Its effectiveness classification is only
+**not-beneficial-in-tested-cell** for this one homogeneous-long pressure cell
+(`n=1`); it does not make BidKV incompatible and cannot be generalized to the
+whole Mod. The later matched three-repeat qualification is the controlling
+record:
+[`sage-mate-20260905-current-main-tp4-graph-r2.md`](sage-mate-20260905-current-main-tp4-graph-r2.md).
 
 - vLLM-HUST `a4d6aa022fb1885a25a802a6e29372c81eac6c9f`
   (`0.28.1rc1.dev391+ga4d6aa022`)
@@ -39,13 +46,16 @@ and forced 8,192 output tokens in total. All requests completed.
 BidKV made 6 utility selections, followed by 158 liveness fallbacks. This
 proves the implementation was invoked, but also shows that the fallback path
 reproduced the built-in preemption churn for almost the entire pressure phase.
-The public compatibility flag must remain false until a new implementation
-beats or matches the built-in policy without correctness regressions.
+This selection mix is a configuration/workload diagnostic. It does not change
+the functional compatibility verdict and must not be promoted to a public
+whole-Mod effectiveness label.
 
 Four short deterministic responses matched the built-in response hashes. The
-four forced 2,048-token pressure responses did not. Because a repeatability
-control has not yet explained that divergence, it is treated as an unresolved
-correctness failure rather than waived as noise.
+four forced 2,048-token pressure responses did not. Later
+baseline-versus-baseline repeatability controls diverged in all four lanes,
+with first differences at token indices 28, 41, 17 and 26. The long-hash
+difference is therefore retained as a TP4 graph determinism/semantic-correctness
+investigation item, not classified as a BidKV compatibility failure.
 
 Four concurrent streams were cancelled after 12 seconds. The server drained
 from four running requests to zero running/zero waiting within one second and a

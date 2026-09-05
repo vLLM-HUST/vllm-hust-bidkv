@@ -35,8 +35,25 @@
         "model": "Qwen3.8-27B",
         "tensor_parallel_size": 4,
         "execution_mode": "graph",
-        "status": "incompatible",
-        "evidence": "docs/evidence/sage-mate-20260905-current-main-tp4-graph.md"
+        "status": "compatible",
+        "functional_compatibility": {
+          "status": "passed",
+          "scope": "Qwen3.8-27B / Ascend TP4 / FULL_DECODE_ONLY graph"
+        },
+        "effectiveness_qualifications": [
+          {
+            "status": "inconclusive",
+            "scope": "ascending mixed / concurrency=4 / 1-GiB KV pressure / n=3"
+          },
+          {
+            "status": "not-beneficial-in-tested-cell",
+            "scope": "interactive batch / concurrency=8 / 1-GiB KV pressure / n=3"
+          }
+        ],
+        "runtime_state_source": "live_instance_observation_only",
+        "tested_runtime_commit": "199e0bdc6fc38fc9b14b626515efdcbf81de0b62",
+        "evidence": "docs/evidence/sage-mate-20260905-bounded-preemption-matrix.md",
+        "superseded_single_run_evidence": "docs/evidence/sage-mate-20260905-current-main-tp4-graph.md"
       }
     ]
   }
