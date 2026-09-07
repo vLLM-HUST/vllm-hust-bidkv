@@ -4,6 +4,12 @@
 
 [English](README.md)
 
+## 学术归属与维护
+
+- 学术负责人：陈彦博（`@cybber695`）、王明琪（`@MingqiWang-coder`）
+- 管理托管：张书豪（`@ShuhaoZhangTony`）
+- 当前范围：维护已录用的 SC 2026 BidKV 成果；BidKV2 与 BidKV-MultiNPU 是独立后续课题
+
 ## 概述
 
 `bidkv` 是一个**零外部依赖**的独立 Python 包，解决 KV cache 压力下的**受害者选择**问题：当 KV 空间不足时，应该 preempt 哪个请求？
