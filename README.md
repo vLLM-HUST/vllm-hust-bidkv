@@ -4,6 +4,12 @@ Framework-portable KV cache request scheduling primitive.
 
 [中文文档](README_zh.md)
 
+## Academic ownership and maintenance
+
+- Academic owners: Chen Yanbo (`@cybber695`) and Wang Mingqi (`@MingqiWang-coder`)
+- Administrative custodian: Shuhao Zhang (`@ShuhaoZhangTony`)
+- Scope: maintenance of the accepted SC 2026 BidKV artifact; BidKV2 and BidKV-MultiNPU are separate follow-on projects
+
 ## Overview
 
 `bidkv` is a **zero-dependency** Python package that addresses the **victim-selection problem** under KV cache pressure: when KV memory is exhausted, which request should be preempted?
