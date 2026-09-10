@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "bidkv"
+name = "vllm-hust-bidkv"
 dynamic = ["version"]
 description = "BidKV — CompressionBid protocol layer for KV cache scheduling primitives"
 readme = "README.md"
@@ -22,6 +22,11 @@ classifiers = [
 
 # 零外部依赖 — 仅依赖 Python stdlib
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/vLLM-HUST/vllm-hust-bidkv"
+Repository = "https://github.com/vLLM-HUST/vllm-hust-bidkv"
+Issues = "https://github.com/vLLM-HUST/vllm-hust-bidkv/issues"
 
 [project.optional-dependencies]
 dev = [
