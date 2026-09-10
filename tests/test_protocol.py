@@ -695,7 +695,7 @@ class TestTopLevelImports:
         # 验证 pyproject.toml 中 dependencies 为空
         # (通过检查包的运行时元数据)
         try:
-            dist = importlib.metadata.distribution("bidkv")
+            dist = importlib.metadata.distribution("vllm-hust-bidkv")
             requires = dist.requires
             # requires 可能为 None 或 只包含 optional deps
             if requires:

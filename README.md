@@ -122,7 +122,7 @@ KV cleanup, reinsertion, and scheduling-budget rollback. The production path
 does not monkey-patch `Scheduler`.
 
 ```bash
-pip install vllm-hust-ext bidkv
+pip install vllm-hust-ext vllm-hust-bidkv
 vllm-hust-ext extension enable org.vllm-hust.bidkv
 vllm-hust-ext run -- vllm serve /data/shared_models/Qwen/Qwen3.8-27B \
     --tensor-parallel-size 4 --port 8000
@@ -166,7 +166,7 @@ The exact semantic mapping, draft code/design mismatch, and migration gates
 are tracked in [the upstream scheduler contract gap](docs/upstream-scheduler-contract-gap.md).
 
 ```bash
-pip install vllm-hust-ext bidkv
+pip install vllm-hust-ext vllm-hust-bidkv
 vllm-hust-ext extension inspect org.vllm-hust.bidkv
 vllm-hust-ext extension validate org.vllm-hust.bidkv
 vllm-hust-ext extension status org.vllm-hust.bidkv
@@ -234,7 +234,7 @@ reinstall from restoring stale enabled intent:
 
 ```bash
 vllm-hust-ext extension forget org.vllm-hust.bidkv
-pip uninstall bidkv
+pip uninstall vllm-hust-bidkv
 ```
 
 `forget` does not stop an existing vLLM process; process restart remains owned

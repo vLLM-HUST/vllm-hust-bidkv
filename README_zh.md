@@ -111,7 +111,7 @@ Sage Mate 固定目标 vLLM-HUST `762f85b3`（`0.28.1rc1.dev319`）提供不可�
 `Scheduler`。
 
 ```bash
-pip install vllm-hust-ext bidkv
+pip install vllm-hust-ext vllm-hust-bidkv
 vllm-hust-ext extension enable org.vllm-hust.bidkv
 vllm-hust-ext run -- vllm serve /data/shared_models/Qwen/Qwen3.8-27B \
     --tensor-parallel-size 4 --port 8000
@@ -150,7 +150,7 @@ Manifest 0.2 不构成兼容性承诺；三类 Host Provider 验收全部通过�
 [上游 scheduler 契约差距](docs/upstream-scheduler-contract-gap.md)。
 
 ```bash
-pip install vllm-hust-ext bidkv
+pip install vllm-hust-ext vllm-hust-bidkv
 vllm-hust-ext extension inspect org.vllm-hust.bidkv
 vllm-hust-ext extension validate org.vllm-hust.bidkv
 vllm-hust-ext extension status org.vllm-hust.bidkv
@@ -205,7 +205,7 @@ vllm-hust-ext extension disable org.vllm-hust.bidkv
 
 ```bash
 vllm-hust-ext extension forget org.vllm-hust.bidkv
-pip uninstall bidkv
+pip uninstall vllm-hust-bidkv
 ```
 
 `forget` 不会停止已经运行的 vLLM 进程；进程重启仍由 vLLM 运维方负责。
