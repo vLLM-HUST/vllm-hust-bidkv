@@ -1,0 +1,3 @@
+[submodule "workloads/llm-serving-workloads"]
+	path = workloads/llm-serving-workloads
+	url = https://github.com/intellistream/llm-serving-workloads
