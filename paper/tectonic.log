@@ -333,31 +333,34 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <6> on input line 15.
 
-Underfull \hbox (badness 1275) in paragraph at lines 25--25
-[]\TU/lmr/bx/n/14.4 Seven-Question Research Con-
+Underfull \hbox (badness 4819) in paragraph at lines 25--25
+[]\TU/lmr/bx/n/14.4 Optional Follow-Up Research
  []
 
 
-Underfull \hbox (badness 1132) in paragraph at lines 28--29
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+
+Underfull \hbox (badness 1132) in paragraph at lines 31--32
 []\TU/lmr/bx/n/10 Q2—Importance. \TU/lmr/m/n/10 Preemption affects TTFT af-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 30--31
+Underfull \hbox (badness 10000) in paragraph at lines 33--34
 []\TU/lmr/bx/n/10 Q3—Hidden assumption and related-work
  []
 
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <7> on input line 33.
+(Font)              <7> on input line 36.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <5> on input line 33.
+(Font)              <5> on input line 36.
 
-Underfull \hbox (badness 10000) in paragraph at lines 41--42
+Underfull \hbox (badness 10000) in paragraph at lines 44--45
 []\TU/lmr/bx/n/10 Q6—Matched evaluation. \TU/lmr/m/n/10 Compare native
  []
 
 
-Underfull \hbox (badness 1946) in paragraph at lines 41--42
+Underfull \hbox (badness 1946) in paragraph at lines 44--45
 \TU/lmr/m/n/10 FCFS/LIFO preemption, SJF admission plus LIFO,
  []
 
@@ -370,59 +373,64 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
 
-Underfull \hbox (badness 10000) in paragraph at lines 58--59
+Underfull \hbox (badness 10000) in paragraph at lines 61--62
 [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][
 ][][][][][][][][][] [] [][]$
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 74--74
+Underfull \hbox (badness 10000) in paragraph at lines 77--77
 []|\TU/lmr/m/n/9 Host
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 74--74
+Underfull \hbox (badness 10000) in paragraph at lines 77--77
 \TU/lmr/m/n/9 unit/integration
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 74--74
+Underfull \hbox (badness 10000) in paragraph at lines 77--77
 []|\TU/lmr/m/n/9 Interactive re-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 74--74
+Underfull \hbox (badness 10000) in paragraph at lines 77--77
 []|\TU/lmr/m/n/9 Ascending-mixed
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 74--74
+Underfull \hbox (badness 10000) in paragraph at lines 77--77
 []|\TU/lmr/m/n/9 Matched SGLang
  []
 
 
-Underfull \hbox (badness 7576) in paragraph at lines 74--74
+Underfull \hbox (badness 7576) in paragraph at lines 77--77
 []|\TU/lmr/m/n/9 Surrogate calibra-
  []
 
 [2]
-Underfull \hbox (badness 2189) in paragraph at lines 95--96
+Underfull \hbox (badness 2189) in paragraph at lines 98--99
 \TU/lmr/m/n/10 PagedAttention and vLLM establish block-level KV
  []
 
 
-Underfull \hbox (badness 1472) in paragraph at lines 95--96
+Underfull \hbox (badness 1472) in paragraph at lines 98--99
 \TU/lmr/m/n/10 management and a native serving baseline [[]]. A
  []
 
 
-Underfull \hbox (badness 1163) in paragraph at lines 95--96
+Underfull \hbox (badness 1163) in paragraph at lines 98--99
 \TU/lmr/m/n/10 large-provider characterization shows that production
  []
 
 
-Underfull \hbox (badness 1320) in paragraph at lines 95--96
+Underfull \hbox (badness 1320) in paragraph at lines 98--99
 \TU/lmr/m/n/10 KV-cache behavior depends on workload and cache-
+ []
+
+
+Underfull \hbox (badness 1199) in paragraph at lines 101--102
+\TU/lmr/m/n/10 selection result, not a KV compressor. This post-
  []
 
 (main.bbl
@@ -432,6 +440,6 @@ Underfull \hbox (badness 3989) in paragraph at lines 12--18
 
 ) [3] (main.aux)
 Package rerunfilecheck Info: File `main.out' has not changed.
-(rerunfilecheck)             Checksum: FCA8346629D84B23E65CC94D0DA68A75;1946.
+(rerunfilecheck)             Checksum: C5F3A3953D48EA69482F3CCBA612E71E;1969.
  )
-Output written on main.xdv (3 pages, 134608 bytes).
+Output written on main.xdv (3 pages, 137064 bytes).

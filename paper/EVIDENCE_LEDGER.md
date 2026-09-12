@@ -1,5 +1,10 @@
 # Evidence ledger
 
+This ledger belongs to a post-acceptance maintenance qualification. It does not
+re-evaluate, replace, or retract the accepted SC 2026 BidKV artifact and its
+original results. Prospective regime-map and calibration claims below are
+optional follow-up work, not acceptance debt.
+
 | Claim | Evidence | Level | Boundary |
 |---|---|---|---|
 | Request-level utility selector, baselines, native plugin, kill switch, and runner exist | `src/bidkv/`, package metadata, and 385-passed/25-skipped source-suite result | host contract | No device-performance implication |

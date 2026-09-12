@@ -6,15 +6,15 @@
 \usepackage{microtype}
 \usepackage{balance}
 \emergencystretch=1.5em
-\title{BidKV: Request-Level Victim Selection Under KV-Cache Pressure}
-\author{Advisor-authored storyline draft; implementation and experiments remain student-owned}
+\title{Post-Acceptance BidKV Maintenance Qualification on Ascend TP4}
+\author{Advisor-authored maintenance note; the accepted SC 2026 artifact remains authoritative}
 \date{September 2026}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-When an LLM server exhausts KV-cache capacity, it must choose a request to preempt. Native policies commonly evict from a scheduling queue without explicitly comparing released capacity with recomputation and starvation risk. BidKV is a framework-portable victim-selector interface that ranks requests by released KV tokens per unit of a disruption surrogate. Its canonical vLLM path evicts an entire request and relies on native preempt-and-recompute; its SGLang-aware branch counts only private radix-tree tokens. It does not compress KV tokens or change model semantics. This distinction makes the core hypothesis falsifiable: utility-ranked victim selection should reduce preemption-induced service cost relative to native LIFO, SJF admission plus LIFO, random, and largest-first selection under matched pressure. A controlled Ascend TP4 qualification on Qwen3.8-27B establishes graph-mode compatibility in five functional cells, but not a performance win. In the three-repeat interactive cell, BidKV reduced mean throughput by 25.31\% and increased p95 latency by 34.57\% relative to the matched baseline; the ascending-mixed cell is inconclusive because one repeat did not invoke the policy. We therefore present the mechanism, negative and incomplete evidence, oracle, and stopping rules without claiming general latency or throughput improvement.
+BidKV is an accepted SC 2026 request-level victim-selection result. This document is a later maintenance qualification for the current package and one Ascend TP4 carrier; it is not the accepted paper, a replacement evaluation, or a retraction of the original result. BidKV ranks requests by released KV tokens per unit of a disruption surrogate, evicts a whole request through native preempt-and-recompute in its canonical vLLM path, and does not compress KV state. A controlled Qwen3.8-27B TP4 campaign establishes graph-mode compatibility in five functional cells. It also records a bounded negative observation: in the three-repeat interactive cell, the maintained configuration reduced mean throughput by 25.31\% and increased p95 latency by 34.57\% relative to its matched baseline. The ascending-mixed cell is inconclusive because one repeat did not invoke the policy. These maintenance observations constrain enablement on the tested carrier and regime; they neither overturn the accepted contribution nor imply general harm. We state the evidence boundary and an optional follow-up contract without requiring a new experiment to preserve the accepted outcome.
 \end{abstract}
 
 \section{Problem and Motivation}
@@ -22,7 +22,10 @@ Paged KV memory turns overload into a victim-selection decision. Evicting a larg
 
 BidKV controls only \emph{which request} is preempted. In vLLM mode A, the framework releases the request's entire current KV footprint and later recomputes it. In the radix-aware SGLang path, shared-prefix state remains resident and only private tokens count as freed capacity. Any description of token compression, selective materialization, or semantic quality degradation would misstate the implemented mechanism.
 
-\section{Seven-Question Research Contract}
+\section{Optional Follow-Up Research Contract}
+The questions below apply only if the project owners choose to pursue a new
+post-acceptance regime-map contribution. They are not missing requirements for
+the accepted SC 2026 paper.
 \textbf{Q1---Problem.} Under repeatable KV pressure, which request-level victim rule minimizes service disruption while freeing the required capacity and avoiding repeated preemption?
 
 \textbf{Q2---Importance.} Preemption affects TTFT after recompute, TPOT/ITL, completion rate, queueing, throughput, and fairness. A selector that improves average throughput but causes starvation or tail regressions is not deployable.
@@ -85,17 +88,17 @@ Use at least ten independent launches or a complete real event set per cell, cou
 
 Stop if pressure is too rare, candidate universes differ, actual release disagrees with $r_i$, output equivalence fails, repeated preemption worsens, or BidKV does not beat the strongest deployable victim baseline after selector overhead. The interactive-cell regression is frozen as a negative result for the current formula in that regime. The next test must select a preregistered regime with consistent policy invocation and compare against the strongest deployable baseline; it must not retune weights on the reported trace. If the positional/disruption surrogate lacks predictive headroom over size-only selection, replace the research question rather than searching the same trace.
 
-\section{Threats and Two-Week Delivery}
+\section{Limits and Optional Follow-Up}
 The main internal threat is counterfactual cost: only the chosen victim is recomputed, so alternative-victim disruption cannot be read directly from one run. Matched replay of frozen arrival traces and repeated independent serving runs provide complementary evidence, but replay remains below real serving. Another threat is admission confounding: SJF changes which requests reach the victim set and cannot be called a pure selector baseline.
 
-Days 1--3 freeze versioned workload traces, pressure events, candidate-universe receipts, and correctness oracle. Days 4--7 run native LIFO, largest-first, and BidKV on the smallest real vLLM matrix. Days 8--10 calibrate the disruption surrogate against measured recompute/tail cost and audit starvation. Days 11--14 add SJF and, only if cache ownership is observable, the SGLang radix branch. Student owners retain implementation, environment, experiment, and result responsibility; this draft supplies only the research contract.
+If the owners elect to pursue that follow-up, a bounded two-week plan is: days 1--3 freeze versioned workload traces, pressure events, candidate-universe receipts, and the correctness oracle; days 4--7 run native LIFO, largest-first, and BidKV on the smallest real vLLM matrix; days 8--10 calibrate the disruption surrogate against measured recompute/tail cost and audit starvation; and days 11--14 add SJF and, only if cache ownership is observable, the SGLang radix branch. This plan is optional and prospective. Student owners retain implementation, environment, experiment, and result responsibility; this maintenance note performs none of that work.
 
 \balance
 \section{Related Work Boundary}
 PagedAttention and vLLM establish block-level KV management and a native serving baseline~\cite{kwon2023pagedattention}. A large-provider characterization shows that production KV-cache behavior depends on workload and cache-management effects rather than capacity alone~\cite{wang2025kvcache}. BidKV is narrower: it selects a request-level preemption victim under a fixed candidate universe. Prefix sharing, compression, and tiering remain separate mechanism classes and cannot be credited to this selector.
 
 \section{Conclusion}
-BidKV is a request-level victim selector, not a KV compressor. Controlled Ascend TP4 runs establish functional integration, while the repeated interactive cell rejects a default-benefit claim for the current formula and the ascending-mixed cell remains inconclusive. The next contribution gate is a matched serving regime with consistent treatment exposure that proves correct native preempt/recompute, calibrates the surrogate, beats the strongest deployable victim baseline, and explains both beneficial and negative pressure regimes.
+BidKV remains the accepted SC 2026 request-level victim-selection result, not a KV compressor. This post-acceptance note qualifies one maintained Ascend TP4 configuration: functional integration succeeds, the repeated interactive cell does not support default enablement, and the ascending-mixed cell remains inconclusive. It does not replace or negate the accepted paper's original evidence. If the owners pursue a separate follow-up contribution, its gate is a matched serving regime with consistent treatment exposure that calibrates the surrogate, beats the strongest deployable victim baseline, and explains both beneficial and negative pressure regimes.
 
 \bibliographystyle{plain}
 \bibliography{references}
