@@ -10,6 +10,22 @@ Framework-portable KV cache request scheduling primitive.
 - Administrative custodian: Shuhao Zhang (`@ShuhaoZhangTony`)
 - Scope: maintenance of the accepted SC 2026 BidKV artifact; BidKV2 and BidKV-MultiNPU are separate follow-on projects
 
+## Paper generations and maintenance evidence
+
+BidKV is an accepted SC 2026 result. That accepted artifact, its original
+evaluation, and its contribution claims remain authoritative and are not
+reopened by later maintenance runs.
+
+The manuscript under [`paper/`](paper/) is a **post-acceptance maintenance
+qualification note** for the current package and Ascend TP4 carrier. It records
+five functional graph-mode cells, one negative interactive cell, and one
+inconclusive ascending-mixed cell. These observations delimit the maintained
+implementation under the recorded configuration; they do not replace the
+accepted paper, retract its original results, or claim that BidKV is generally
+harmful. Any new regime-map or surrogate-calibration study described there is
+an optional follow-up contribution owned by the project authors, not a
+condition for preserving the accepted BidKV outcome.
+
 ## Overview
 
 `bidkv` is a **zero-dependency** Python package that addresses the **victim-selection problem** under KV cache pressure: when KV memory is exhausted, which request should be preempted?

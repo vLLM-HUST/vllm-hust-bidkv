@@ -1,62 +1,445 @@
-make: Entering directory '/home/shuhao/.codex/worktrees/paper-request-fix-20260831/bidkv/paper'
-mkdir -p build
-/home/shuhao/.conda/envs/neuromem/bin/tectonic -X compile main.tex --outdir build --keep-logs
-note: "version 2" Tectonic command-line interface activated
-note: Running TeX ...
-warning: main.tex:25: Underfull \hbox (badness 1275) in paragraph at lines 25--25
-warning: main.tex:27: Underfull \vbox (badness 10000) has occurred while \output is active
-warning: main.tex:29: Underfull \hbox (badness 1132) in paragraph at lines 28--29
-warning: main.tex:31: Underfull \hbox (badness 10000) in paragraph at lines 30--31
-warning: main.tex:42: Underfull \hbox (badness 10000) in paragraph at lines 41--42
-warning: main.tex:42: Underfull \hbox (badness 1946) in paragraph at lines 41--42
-warning: main.tex:74: Underfull \hbox (badness 10000) in paragraph at lines 74--74
-warning: main.tex:74: Underfull \hbox (badness 10000) in paragraph at lines 74--74
-warning: main.tex:74: Underfull \hbox (badness 1067) in paragraph at lines 74--74
-warning: main.tex:74: Underfull \hbox (badness 10000) in paragraph at lines 74--74
-warning: main.tex:74: Underfull \hbox (badness 7576) in paragraph at lines 74--74
-warning: main.tex:96: Underfull \hbox (badness 2189) in paragraph at lines 95--96
-warning: main.tex:96: Underfull \hbox (badness 1418) in paragraph at lines 95--96
-warning: main.tex:96: Underfull \hbox (badness 1163) in paragraph at lines 95--96
-warning: main.tex:96: Underfull \hbox (badness 1320) in paragraph at lines 95--96
-note: Running BibTeX on main.aux ...
-note: Rerunning TeX because bibtex was run ...
-warning: main.tex:25: Underfull \hbox (badness 1275) in paragraph at lines 25--25
-warning: main.tex:27: Underfull \vbox (badness 10000) has occurred while \output is active
-warning: main.tex:29: Underfull \hbox (badness 1132) in paragraph at lines 28--29
-warning: main.tex:31: Underfull \hbox (badness 10000) in paragraph at lines 30--31
-warning: main.tex:42: Underfull \hbox (badness 10000) in paragraph at lines 41--42
-warning: main.tex:42: Underfull \hbox (badness 1946) in paragraph at lines 41--42
-warning: main.tex:74: Underfull \hbox (badness 10000) in paragraph at lines 74--74
-warning: main.tex:74: Underfull \hbox (badness 10000) in paragraph at lines 74--74
-warning: main.tex:74: Underfull \hbox (badness 1067) in paragraph at lines 74--74
-warning: main.tex:74: Underfull \hbox (badness 10000) in paragraph at lines 74--74
-warning: main.tex:74: Underfull \hbox (badness 7576) in paragraph at lines 74--74
-warning: main.tex:96: Underfull \hbox (badness 2189) in paragraph at lines 95--96
-warning: main.tex:96: Underfull \hbox (badness 1418) in paragraph at lines 95--96
-warning: main.tex:96: Underfull \hbox (badness 1163) in paragraph at lines 95--96
-warning: main.tex:96: Underfull \hbox (badness 1320) in paragraph at lines 95--96
-warning: main.bbl:18: Underfull \hbox (badness 3989) in paragraph at lines 12--18
-note: Rerunning TeX because "main.aux" changed ...
-warning: main.tex:25: Underfull \hbox (badness 1275) in paragraph at lines 25--25
-warning: main.tex:27: Underfull \vbox (badness 10000) has occurred while \output is active
-warning: main.tex:29: Underfull \hbox (badness 1132) in paragraph at lines 28--29
-warning: main.tex:31: Underfull \hbox (badness 10000) in paragraph at lines 30--31
-warning: main.tex:42: Underfull \hbox (badness 10000) in paragraph at lines 41--42
-warning: main.tex:42: Underfull \hbox (badness 1946) in paragraph at lines 41--42
-warning: main.tex:74: Underfull \hbox (badness 10000) in paragraph at lines 74--74
-warning: main.tex:74: Underfull \hbox (badness 10000) in paragraph at lines 74--74
-warning: main.tex:74: Underfull \hbox (badness 1067) in paragraph at lines 74--74
-warning: main.tex:74: Underfull \hbox (badness 10000) in paragraph at lines 74--74
-warning: main.tex:74: Underfull \hbox (badness 7576) in paragraph at lines 74--74
-warning: main.tex:96: Underfull \hbox (badness 2189) in paragraph at lines 95--96
-warning: main.tex:96: Underfull \hbox (badness 1472) in paragraph at lines 95--96
-warning: main.tex:96: Underfull \hbox (badness 1163) in paragraph at lines 95--96
-warning: main.tex:96: Underfull \hbox (badness 1320) in paragraph at lines 95--96
-warning: main.bbl:18: Underfull \hbox (badness 3989) in paragraph at lines 12--18
-warning: warnings were issued by the TeX engine; use --print and/or --keep-logs for details.
-note: Running xdvipdfmx ...
-note: Writing `build/main.log` (13.5693359375 KiB)
-note: Writing `build/main.pdf` (59.2568359375 KiB)
-note: Writing `build/main.blg` (191 B)
-note: Skipped writing 3 intermediate files (use --keep-intermediates to keep them)
-make: Leaving directory '/home/shuhao/.codex/worktrees/paper-request-fix-20260831/bidkv/paper'
+**
+(main.tex
+LaTeX2e <2021-11-15> patch level 1
+L3 programming layer <2022-02-24> (article.cls
+Document Class: article 2021/10/04 v1.4n Standard LaTeX document class
+(size10.clo
+File: size10.clo 2021/10/04 v1.4n Standard LaTeX file (size option)
+)
+\c@part=\count181
+\c@section=\count182
+\c@subsection=\count183
+\c@subsubsection=\count184
+\c@paragraph=\count185
+\c@subparagraph=\count186
+\c@figure=\count187
+\c@table=\count188
+\abovecaptionskip=\skip47
+\belowcaptionskip=\skip48
+\bibindent=\dimen138
+) (geometry.sty
+Package: geometry 2020/01/02 v5.9 Page Geometry
+ (keyval.sty
+Package: keyval 2014/10/28 v1.15 key=value parser (DPC)
+\KV@toks@=\toks16
+) (ifvtex.sty
+Package: ifvtex 2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.
+ (iftex.sty
+Package: iftex 2022/02/03 v1.0f TeX engine tests
+))
+\Gm@cnth=\count189
+\Gm@cntv=\count190
+\c@Gm@tempcnt=\count191
+\Gm@bindingoffset=\dimen139
+\Gm@wd@mp=\dimen140
+\Gm@odd@mp=\dimen141
+\Gm@even@mp=\dimen142
+\Gm@layoutwidth=\dimen143
+\Gm@layoutheight=\dimen144
+\Gm@layouthoffset=\dimen145
+\Gm@layoutvoffset=\dimen146
+\Gm@dimlist=\toks17
+)
+(booktabs.sty
+Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
+\heavyrulewidth=\dimen147
+\lightrulewidth=\dimen148
+\cmidrulewidth=\dimen149
+\belowrulesep=\dimen150
+\belowbottomsep=\dimen151
+\aboverulesep=\dimen152
+\abovetopsep=\dimen153
+\cmidrulesep=\dimen154
+\cmidrulekern=\dimen155
+\defaultaddspace=\dimen156
+\@cmidla=\count192
+\@cmidlb=\count193
+\@aboverulesep=\dimen157
+\@belowrulesep=\dimen158
+\@thisruleclass=\count194
+\@lastruleclass=\count195
+\@thisrulewidth=\dimen159
+) (tabularx.sty
+Package: tabularx 2020/01/15 v2.11c `tabularx' package (DPC)
+ (array.sty
+Package: array 2021/10/04 v2.5f Tabular extension package (FMi)
+\col@sep=\dimen160
+\ar@mcellbox=\box50
+\extrarowheight=\dimen161
+\NC@list=\toks18
+\extratabsurround=\skip49
+\backup@length=\skip50
+\ar@cellbox=\box51
+)
+\TX@col@width=\dimen162
+\TX@old@table=\dimen163
+\TX@old@col=\dimen164
+\TX@target=\dimen165
+\TX@delta=\dimen166
+\TX@cols=\count196
+\TX@ftn=\toks19
+) (hyperref.sty
+Package: hyperref 2022-02-21 v7.00n Hypertext links for LaTeX
+ (ltxcmds.sty
+Package: ltxcmds 2020-05-10 v1.25 LaTeX kernel commands for general use (HO)
+)
+(pdftexcmds.sty
+Package: pdftexcmds 2020-06-27 v0.33 Utility functions of pdfTeX for LuaTeX (HO
+)
+ (infwarerr.sty
+Package: infwarerr 2019/12/03 v1.5 Providing info/warning/error messages (HO)
+)
+Package pdftexcmds Info: \pdf@primitive is available.
+Package pdftexcmds Info: \pdf@ifprimitive is available.
+Package pdftexcmds Info: \pdfdraftmode not found.
+) (kvsetkeys.sty
+Package: kvsetkeys 2019/12/15 v1.18 Key value parser (HO)
+) (kvdefinekeys.sty
+Package: kvdefinekeys 2019-12-19 v1.6 Define keys (HO)
+)
+(pdfescape.sty
+Package: pdfescape 2019/12/09 v1.15 Implements pdfTeX's escape features (HO)
+) (hycolor.sty
+Package: hycolor 2020-01-27 v1.10 Color options for hyperref/bookmark (HO)
+) (letltxmacro.sty
+Package: letltxmacro 2019/12/03 v1.6 Let assignment for LaTeX macros (HO)
+) (auxhook.sty
+Package: auxhook 2019-12-17 v1.6 Hooks for auxiliary files (HO)
+) (kvoptions.sty
+Package: kvoptions 2020-10-07 v3.14 Key value format for package options (HO)
+)
+\@linkdim=\dimen167
+\Hy@linkcounter=\count197
+\Hy@pagecounter=\count198
+
+(pd1enc.def
+File: pd1enc.def 2022-02-21 v7.00n Hyperref: PDFDocEncoding definition (HO)
+) (intcalc.sty
+Package: intcalc 2019/12/15 v1.3 Expandable calculations with integers (HO)
+) (etexcmds.sty
+Package: etexcmds 2019/12/15 v1.7 Avoid name clashes with e-TeX commands (HO)
+)
+\Hy@SavedSpaceFactor=\count199
+ (puenc.def
+File: puenc.def 2022-02-21 v7.00n Hyperref: PDF Unicode definition (HO)
+)
+Package hyperref Info: Hyper figures OFF on input line 4137.
+Package hyperref Info: Link nesting OFF on input line 4142.
+Package hyperref Info: Hyper index ON on input line 4145.
+Package hyperref Info: Plain pages OFF on input line 4152.
+Package hyperref Info: Backreferencing OFF on input line 4157.
+Package hyperref Info: Implicit mode ON; LaTeX internals redefined.
+Package hyperref Info: Bookmarks ON on input line 4390.
+\c@Hy@tempcnt=\count266
+ (url.sty
+\Urlmuskip=\muskip16
+Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
+)
+LaTeX Info: Redefining \url on input line 4749.
+\XeTeXLinkMargin=\dimen168
+ (bitset.sty
+Package: bitset 2019/12/09 v1.3 Handle bit-vector datatype (HO)
+
+(bigintcalc.sty
+Package: bigintcalc 2019/12/15 v1.5 Expandable calculations on big integers (HO
+)
+))
+\Fld@menulength=\count267
+\Field@Width=\dimen169
+\Fld@charsize=\dimen170
+Package hyperref Info: Hyper figures OFF on input line 6027.
+Package hyperref Info: Link nesting OFF on input line 6032.
+Package hyperref Info: Hyper index ON on input line 6035.
+Package hyperref Info: backreferencing OFF on input line 6042.
+Package hyperref Info: Link coloring OFF on input line 6047.
+Package hyperref Info: Link coloring with OCG OFF on input line 6052.
+Package hyperref Info: PDF/A mode OFF on input line 6057.
+LaTeX Info: Redefining \ref on input line 6097.
+LaTeX Info: Redefining \pageref on input line 6101.
+ (atbegshi-ltx.sty
+Package: atbegshi-ltx 2021/01/10 v1.0c Emulation of the original atbegshi
+package with kernel methods
+)
+\Hy@abspage=\count268
+\c@Item=\count269
+\c@Hfootnote=\count270
+)
+Package hyperref Info: Driver (autodetected): hxetex.
+ (hxetex.def
+File: hxetex.def 2022-02-21 v7.00n Hyperref driver for XeTeX
+ (stringenc.sty
+Package: stringenc 2019/11/29 v1.12 Convert strings between diff. encodings (HO
+)
+)
+\pdfm@box=\box52
+\c@Hy@AnnotLevel=\count271
+\HyField@AnnotCount=\count272
+\Fld@listcount=\count273
+\c@bookmark@seq@number=\count274
+
+(rerunfilecheck.sty
+Package: rerunfilecheck 2019/12/05 v1.9 Rerun checks for auxiliary files (HO)
+ (atveryend-ltx.sty
+Package: atveryend-ltx 2020/08/19 v1.0a Emulation of the original atveryend pac
+kage
+with kernel methods
+) (uniquecounter.sty
+Package: uniquecounter 2019/12/15 v1.4 Provide unlimited unique counter (HO)
+)
+Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 2
+86.
+)
+\Hy@SectionHShift=\skip51
+) (microtype.sty
+Package: microtype 2022/03/14 v3.0d Micro-typographical refinements (RS)
+
+(etoolbox.sty
+Package: etoolbox 2020/10/05 v2.5k e-TeX tools for LaTeX (JAW)
+\etb@tempcnta=\count275
+)
+\MT@toks=\toks20
+\MT@tempbox=\box53
+\MT@count=\count276
+LaTeX Info: Redefining \noprotrusionifhmode on input line 1027.
+LaTeX Info: Redefining \leftprotrusion on input line 1028.
+LaTeX Info: Redefining \rightprotrusion on input line 1036.
+LaTeX Info: Redefining \textls on input line 1195.
+\MT@outer@kern=\dimen171
+LaTeX Info: Redefining \textmicrotypecontext on input line 1781.
+\MT@listname@count=\count277
+ (microtype-xetex.def
+File: microtype-xetex.def 2022/03/14 v3.0d Definitions specific to xetex (RS)
+LaTeX Info: Redefining \lsstyle on input line 236.
+)
+Package microtype Info: Loading configuration file microtype.cfg.
+ (microtype.cfg
+File: microtype.cfg 2022/03/14 v3.0d microtype main configuration file (RS)
+)) (balance.sty
+Package: balance 1999/02/23 4.3 (PWD)
+\oldvsize=\dimen172
+)
+(l3backend-xetex.def
+File: l3backend-xetex.def 2022-02-07 L3 backend support: XeTeX
+\c__kernel_sys_dvipdfmx_version_int=\count278
+\l__color_backend_stack_int=\count279
+\g__color_backend_stack_int=\count280
+\g__graphics_track_int=\count281
+\l__pdf_internal_box=\box54
+\g__pdf_backend_object_int=\count282
+\g__pdf_backend_annotation_int=\count283
+\g__pdf_backend_link_int=\count284
+) (main.aux)
+\openout1 = `main.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 13.
+LaTeX Font Info:    ... okay on input line 13.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 13.
+LaTeX Font Info:    ... okay on input line 13.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 13.
+LaTeX Font Info:    ... okay on input line 13.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 13.
+LaTeX Font Info:    ... okay on input line 13.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 13.
+LaTeX Font Info:    Trying to load font information for TS1+cmr on input line 1
+3.
+ (ts1cmr.fd
+File: ts1cmr.fd 2019/12/16 v2.5j Standard LaTeX font definitions
+)
+LaTeX Font Info:    ... okay on input line 13.
+LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 13.
+LaTeX Font Info:    ... okay on input line 13.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 13.
+LaTeX Font Info:    ... okay on input line 13.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 13.
+LaTeX Font Info:    ... okay on input line 13.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 13.
+LaTeX Font Info:    ... okay on input line 13.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 13.
+LaTeX Font Info:    ... okay on input line 13.
+
+*geometry* driver: auto-detecting
+*geometry* detected driver: xetex
+*geometry* verbose mode - [ preamble ] result:
+* driver: xetex
+* paper: <default>
+* layout: <same size as paper>
+* layoutoffset:(h,v)=(0.0pt,0.0pt)
+* modes: 
+* h-part:(L,W,R)=(52.03448pt, 510.22603pt, 52.03448pt)
+* v-part:(T,H,B)=(52.03448pt, 690.90102pt, 52.03448pt)
+* \paperwidth=614.295pt
+* \paperheight=794.96999pt
+* \textwidth=510.22603pt
+* \textheight=690.90102pt
+* \oddsidemargin=-20.2355pt
+* \evensidemargin=-20.2355pt
+* \topmargin=-57.2355pt
+* \headheight=12.0pt
+* \headsep=25.0pt
+* \topskip=10.0pt
+* \footskip=30.0pt
+* \marginparwidth=4.0pt
+* \marginparsep=10.0pt
+* \columnsep=10.0pt
+* \skip\footins=9.0pt plus 4.0pt minus 2.0pt
+* \hoffset=0.0pt
+* \voffset=0.0pt
+* \mag=1000
+* \@twocolumntrue
+* \@twosidefalse
+* \@mparswitchfalse
+* \@reversemarginfalse
+* (1in=72.27pt=25.4mm, 1cm=28.453pt)
+
+Package hyperref Info: Link coloring OFF on input line 13.
+(nameref.sty
+Package: nameref 2021-04-02 v2.47 Cross-referencing by name of section
+ (refcount.sty
+Package: refcount 2019/12/15 v3.6 Data extraction from label references (HO)
+) (gettitlestring.sty
+Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
+)
+\c@section@level=\count285
+)
+LaTeX Info: Redefining \ref on input line 13.
+LaTeX Info: Redefining \pageref on input line 13.
+LaTeX Info: Redefining \nameref on input line 13.
+ (main.out) (main.out)
+\@outlinefile=\write3
+\openout3 = `main.out'.
+
+LaTeX Info: Redefining \microtypecontext on input line 13.
+Package microtype Info: Applying patch `item' on input line 13.
+Package microtype Info: Applying patch `toc' on input line 13.
+Package microtype Info: Applying patch `eqnum' on input line 13.
+Package microtype Info: Applying patch `footnote' on input line 13.
+Package microtype Info: Character protrusion enabled (level 2).
+Package microtype Info: Using default protrusion set `alltext'.
+Package microtype Info: No adjustment of tracking.
+Package microtype Info: No adjustment of spacing.
+Package microtype Info: No adjustment of kerning.
+
+(mt-LatinModernRoman.cfg
+File: mt-LatinModernRoman.cfg 2021/02/21 v1.1 microtype config. file: Latin Mod
+ern Roman (RS)
+) (mt-cmr.cfg
+File: mt-cmr.cfg 2013/05/19 v2.2 microtype config. file: Computer Modern Roman 
+(RS)
+)
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <12> on input line 15.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <8> on input line 15.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <6> on input line 15.
+
+Underfull \hbox (badness 4819) in paragraph at lines 25--25
+[]\TU/lmr/bx/n/14.4 Optional Follow-Up Research
+ []
+
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+
+Underfull \hbox (badness 1132) in paragraph at lines 31--32
+[]\TU/lmr/bx/n/10 Q2—Importance. \TU/lmr/m/n/10 Preemption affects TTFT af-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 33--34
+[]\TU/lmr/bx/n/10 Q3—Hidden assumption and related-work
+ []
+
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <7> on input line 36.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <5> on input line 36.
+
+Underfull \hbox (badness 10000) in paragraph at lines 44--45
+[]\TU/lmr/bx/n/10 Q6—Matched evaluation. \TU/lmr/m/n/10 Compare native
+ []
+
+
+Underfull \hbox (badness 1946) in paragraph at lines 44--45
+\TU/lmr/m/n/10 FCFS/LIFO preemption, SJF admission plus LIFO,
+ []
+
+[1
+
+
+]
+Package microtype Info: Loading generic protrusion settings for font family
+(microtype)             `lmtt' (encoding: TU).
+(microtype)             For optimal results, create family-specific settings.
+(microtype)             See the microtype manual for details.
+
+Underfull \hbox (badness 10000) in paragraph at lines 61--62
+[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][
+][][][][][][][][][] [] [][]$
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 77--77
+[]|\TU/lmr/m/n/9 Host
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 77--77
+\TU/lmr/m/n/9 unit/integration
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 77--77
+[]|\TU/lmr/m/n/9 Interactive re-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 77--77
+[]|\TU/lmr/m/n/9 Ascending-mixed
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 77--77
+[]|\TU/lmr/m/n/9 Matched SGLang
+ []
+
+
+Underfull \hbox (badness 7576) in paragraph at lines 77--77
+[]|\TU/lmr/m/n/9 Surrogate calibra-
+ []
+
+[2]
+Underfull \hbox (badness 2189) in paragraph at lines 98--99
+\TU/lmr/m/n/10 PagedAttention and vLLM establish block-level KV
+ []
+
+
+Underfull \hbox (badness 1472) in paragraph at lines 98--99
+\TU/lmr/m/n/10 management and a native serving baseline [[]]. A
+ []
+
+
+Underfull \hbox (badness 1163) in paragraph at lines 98--99
+\TU/lmr/m/n/10 large-provider characterization shows that production
+ []
+
+
+Underfull \hbox (badness 1320) in paragraph at lines 98--99
+\TU/lmr/m/n/10 KV-cache behavior depends on workload and cache-
+ []
+
+
+Underfull \hbox (badness 1199) in paragraph at lines 101--102
+\TU/lmr/m/n/10 selection result, not a KV compressor. This post-
+ []
+
+(main.bbl
+Underfull \hbox (badness 3989) in paragraph at lines 12--18
+\TU/lmr/m/n/10 Dingyan Zhang, Chenguang Fang, Rong Chen,
+ []
+
+) [3] (main.aux)
+Package rerunfilecheck Info: File `main.out' has not changed.
+(rerunfilecheck)             Checksum: C5F3A3953D48EA69482F3CCBA612E71E;1969.
+ )
+Output written on main.xdv (3 pages, 137064 bytes).
