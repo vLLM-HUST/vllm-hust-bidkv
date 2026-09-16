@@ -1,0 +1,13 @@
+{
+  "schema_version": "workload-governance/v1",
+  "mode": "general-serving",
+  "rationale": "BidKV victim-selection evaluation needs matched request-pressure families and replay identities across deployable scheduling baselines.",
+  "canonical_repository": "intellistream/llm-serving-workloads",
+  "canonical_url": "https://github.com/intellistream/llm-serving-workloads",
+  "path": "workloads/llm-serving-workloads",
+  "pin": "ceef92d52e0c49f26ba1efc6706edd1f6df5d913",
+  "suites": ["src/llm_serving_workloads/families.py", "src/llm_serving_workloads/presets.py", "src/llm_serving_workloads/real_workload_replay.py"],
+  "license_status": "not-declared-private-internal-only",
+  "split_policy": "Freeze request cases, arrival or replay inputs, seeds, and split roles for every matched baseline and treatment comparison.",
+  "update_process": "Update only through a reviewed gitlink commit, rerun recursive-checkout and workload checker validation, and record the replacement pin."
+}
