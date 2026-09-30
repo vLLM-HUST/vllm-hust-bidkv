@@ -614,7 +614,7 @@ class TestBidkvVictimSelectorRuntime:
             True,
             1.0,
             2,
-            "FCFS",
+            SchedulingPolicy.FCFS.value,
         ]
 
     def test_largest_first_strategy(self):
