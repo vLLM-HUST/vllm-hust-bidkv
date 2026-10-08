@@ -1,0 +1,47 @@
+{
+  "canonical_repository": "https://github.com/vLLM-HUST/vllm-hust-bidkv",
+  "display_name": "BidKV",
+  "evidence": {
+    "index": "https://github.com/vLLM-HUST/vllm-hust-bidkv/blob/main/docs/evidence/sage-mate-20260905-bounded-preemption-matrix.md",
+    "latest_result": "https://github.com/vLLM-HUST/vllm-hust-bidkv/blob/main/docs/evidence/sage-mate-20260905-bounded-preemption-matrix.md",
+    "performance_claims": [],
+    "qualification": "unqualified"
+  },
+  "lifecycle": {
+    "activation_contract": "See the extension manifest and README; discovery alone does not enable this MOD.",
+    "default_enabled": false,
+    "rollback_contract": "Disable the MOD and return to the unmodified host path.",
+    "status": "experimental"
+  },
+  "metadata_source": {
+    "commit": "7df1647048ac5f05fcc502ce4bea94f26d0f5362",
+    "repository": "vLLM-HUST/vllm-hust-website"
+  },
+  "mod_id": "bidkv",
+  "repository": "vllm-hust-bidkv",
+  "responsibility": {
+    "advisor_status": "unknown",
+    "advisors": [],
+    "maintainers": [
+      {
+        "github": "MingqiWang-coder",
+        "name": "MingqiWang-coder"
+      },
+      {
+        "github": "cybber695",
+        "name": "cybber695"
+      }
+    ],
+    "organization": "vLLM-HUST"
+  },
+  "schema_version": "vllm-hust-mod-metadata-v1",
+  "scope": {
+    "mechanism": "scheduler_policy",
+    "out_of_scope": [],
+    "supported_workloads": [
+      "Qwen3.8-27B — artifact functional qualified; effectiveness matrix incomplete",
+      "Qwen3-0.6B — historical 0.23 lane",
+      "Qwen2.5-3B — historical 0.23 lane"
+    ]
+  }
+}
