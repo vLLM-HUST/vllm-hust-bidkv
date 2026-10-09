@@ -35,7 +35,7 @@
     "validate .vllm-hust/optimization.json with the pinned dev-hub resolver",
     "python -m pytest tests/ -v",
     "ruff check .",
-    "validate src/bidkv/manifests/vllm-hust-extension-v0.2.json against the experimental Extension schema",
+    "validate src/bidkv/manifests/vllm-hust-extension-v0.3.json against the experimental Extension schema",
     "verify the main distribution registers no non-upstream vllm.victim_selector entry point",
     "preserve the completed real Qwen3.8 TP4 graph scheduler invocation, output and next-process rollback evidence when changing the candidate",
     "run matched framework experiments before publishing performance claims"

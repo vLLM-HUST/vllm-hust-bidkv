@@ -137,13 +137,13 @@ PY
 
 ### vLLM-HUST Extension Manager 路径
 
-BidKV 现在随包提供 `bidkv/manifests/vllm-hust-extension-v0.2.json`，用于实验性的
-vLLM-HUST Extension Manifest 0.2 路径。该 manifest 把 BidKV 描述为进程内
+BidKV 现在随包提供 `bidkv/manifests/vllm-hust-extension-v0.3.json`，用于实验性的
+vLLM-HUST Extension Manifest 0.3 路径。该 manifest 把 BidKV 描述为进程内
 scheduler policy，而不是 KV store、KV connector 或外部 control plane。
 wheel 会通过 `vllm_hust.extension_bundles` 静态注册 manifest；发现过程既不会
 import BidKV，也不会启用调度行为。
 
-Manifest 0.2 不构成兼容性承诺；三类 Host Provider 验收全部通过前，不能把它
+Manifest 0.3 不构成兼容性承诺；三类 Host Provider 验收全部通过前，不能把它
 作为稳定 Bundle v1 契约发布。
 
 > **宿主边界：** 通用契约由 `vLLM-HUST` 组织维护；安全 abstain 与内置 victim

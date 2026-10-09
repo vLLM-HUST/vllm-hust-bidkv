@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.2-experimental",
+  "schema_version": "0.3-experimental",
   "extension_id": "org.vllm-hust.bidkv",
   "extension_version": "0.2.1",
   "kind": "scheduler_policy",
@@ -30,6 +30,14 @@
     }
   ],
   "requires_services": [],
+  "requires_extensions": [],
+  "resource_claims": [
+    {
+      "resource": "vllm.scheduler.preemption-policy",
+      "scope": "vllm-process",
+      "mode": "exclusive"
+    }
+  ],
   "components": [
     {
       "component_id": "victim-selector",
