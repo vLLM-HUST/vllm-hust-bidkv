@@ -79,10 +79,11 @@ def test_legacy_experiment_fails_closed_without_separate_distribution(
 
 
 def test_experimental_extension_manifest_matches_native_policy() -> None:
-    manifest_path = REPO_ROOT / "src" / "bidkv" / "manifests" / "vllm-hust-extension-v0.2.json"
+    manifest_path = REPO_ROOT / "src" / "bidkv" / "manifests" / "vllm-hust-extension-v0.3.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
-    assert manifest["schema_version"] == "0.2-experimental"
+    assert manifest["schema_version"] == "0.3-experimental"
+    assert manifest["resource_claims"]
     assert manifest["extension_id"] == "org.vllm-hust.bidkv"
     assert manifest["kind"] == "scheduler_policy"
     assert manifest["host"] == {

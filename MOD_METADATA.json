@@ -3,9 +3,15 @@
   "display_name": "BidKV",
   "evidence": {
     "index": "https://github.com/vLLM-HUST/vllm-hust-bidkv/blob/main/docs/evidence/sage-mate-20260905-bounded-preemption-matrix.md",
-    "latest_result": "https://github.com/vLLM-HUST/vllm-hust-bidkv/blob/main/docs/evidence/sage-mate-20260905-bounded-preemption-matrix.md",
-    "performance_claims": [],
-    "qualification": "unqualified"
+    "latest_result": "https://github.com/vLLM-HUST/vllm-hust-bidkv/blob/main/results/qwen35-evoscientist-20260929/README.md#high-concurrency-kv-pressure-result",
+    "performance_claims": [
+      {
+        "label": "matched-real-online-tested-cell",
+        "scope": "Qwen3.5-35B-A3B TP4 graph, concurrency 12, 512 MiB KV per NPU, two alternating-order pairs",
+        "result": "Output throughput improved 17.11% and 10.65% (13.83% geometric mean); other retained cells were negative or did not exercise the policy, so this is not a general speedup claim."
+      }
+    ],
+    "qualification": "qualified-in-tested-cell"
   },
   "lifecycle": {
     "activation_contract": "See the extension manifest and README; discovery alone does not enable this MOD.",
@@ -20,7 +26,7 @@
   "mod_id": "bidkv",
   "repository": "vllm-hust-bidkv",
   "responsibility": {
-    "advisor_status": "unknown",
+    "advisor_status": "not_declared",
     "advisors": [],
     "maintainers": [
       {
