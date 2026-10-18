@@ -29,7 +29,6 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-
 POLICY = "bidkv.adapters.vllm_hust.selector.BidkvPreemptionPolicy"
 POLICY_ENV = {
     "enable_utility_victim_selection": "BIDKV_UTILITY_ENABLE",
@@ -100,7 +99,9 @@ def metric_value(metrics: str, name: str, event: str | None = None) -> float:
 def git_head(path: Path) -> str | None:
     result = subprocess.run(
         ["git", "-C", str(path), "rev-parse", "HEAD"],
-        text=True, capture_output=True, check=False,
+        text=True,
+        capture_output=True,
+        check=False,
     )
     return result.stdout.strip() if result.returncode == 0 else None
 
@@ -138,7 +139,11 @@ def main() -> None:
     if not args.trace.is_file():
         parser.error(f"trace not found: {args.trace}")
     devices = args.devices.split(",")
-    if not devices or any(not item.isdecimal() for item in devices) or len(set(devices)) != len(devices):
+    if (
+        not devices
+        or any(not item.isdecimal() for item in devices)
+        or len(set(devices)) != len(devices)
+    ):
         parser.error("--devices must be a comma-separated list of unique NPU IDs")
     if args.repeats < 1 or args.num_prompts < 1 or args.max_concurrency < 1:
         parser.error("repeats, num-prompts, and max-concurrency must be positive")
@@ -178,8 +183,7 @@ def main() -> None:
             (args.model / "config.json").read_bytes()
         ).hexdigest(),
         "model_index_sha256": (
-            hashlib.sha256(index_path.read_bytes()).hexdigest()
-            if index_path.is_file() else None
+            hashlib.sha256(index_path.read_bytes()).hexdigest() if index_path.is_file() else None
         ),
         "vllm_version": importlib.metadata.version("vllm"),
         "vllm_ascend_version": importlib.metadata.version("vllm-ascend"),
@@ -194,7 +198,11 @@ def main() -> None:
                 (row for row in records if row["repeat"] == repeat and row["arm"] == "baseline"),
                 None,
             )
-            if baseline is None or baseline["dataset_sha256"] != dataset_sha or baseline["devices"] != devices:
+            if (
+                baseline is None
+                or baseline["dataset_sha256"] != dataset_sha
+                or baseline["devices"] != devices
+            ):
                 parser.error(f"repeat {repeat}: matching saved baseline required for --arms bidkv")
     for repeat in range(args.start_repeat - 1, args.repeats):
         # Alternate order to reduce drift across paired runs.
@@ -205,29 +213,62 @@ def main() -> None:
             run_dir = args.output_dir / f"repeat-{repeat + 1}-{arm}"
             run_dir.mkdir(parents=True, exist_ok=True)
             server_cmd = [
-                str(vllm_executable), "serve", str(args.model),
-                "--host", "127.0.0.1", "--port", str(args.port),
-                "--tensor-parallel-size", str(len(devices)),
-                "--max-model-len", str(args.max_model_len),
-                "--max-num-seqs", str(args.max_concurrency),
-                "--kv-cache-memory-bytes", str(args.kv_cache_memory_bytes),
+                str(vllm_executable),
+                "serve",
+                str(args.model),
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(args.port),
+                "--tensor-parallel-size",
+                str(len(devices)),
+                "--max-model-len",
+                str(args.max_model_len),
+                "--max-num-seqs",
+                str(args.max_concurrency),
+                "--kv-cache-memory-bytes",
+                str(args.kv_cache_memory_bytes),
             ]
             if arm == "bidkv":
                 server_cmd += [
-                    "--preemption-policy", POLICY,
+                    "--preemption-policy",
+                    POLICY,
                 ]
             bench_cmd = [
-                str(vllm_executable), "bench", "serve",
-                "--backend", "vllm", "--endpoint", "/v1/completions",
-                "--host", "127.0.0.1", "--port", str(args.port),
-                "--model", str(args.model),
-                "--dataset-name", "custom", "--dataset-path", str(args.trace),
-                "--custom-output-len", "-1", "--disable-shuffle", "--ignore-eos",
-                "--num-prompts", str(args.num_prompts),
-                "--max-concurrency", str(args.max_concurrency),
-                "--request-rate", str(args.request_rate),
-                "--seed", "0", "--save-result",
-                "--result-dir", str(run_dir), "--result-filename", "result.json",
+                str(vllm_executable),
+                "bench",
+                "serve",
+                "--backend",
+                "vllm",
+                "--endpoint",
+                "/v1/completions",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(args.port),
+                "--model",
+                str(args.model),
+                "--dataset-name",
+                "custom",
+                "--dataset-path",
+                str(args.trace),
+                "--custom-output-len",
+                "-1",
+                "--disable-shuffle",
+                "--ignore-eos",
+                "--num-prompts",
+                str(args.num_prompts),
+                "--max-concurrency",
+                str(args.max_concurrency),
+                "--request-rate",
+                str(args.request_rate),
+                "--seed",
+                "0",
+                "--save-result",
+                "--result-dir",
+                str(run_dir),
+                "--result-filename",
+                "result.json",
             ]
             record = {
                 "arm": arm,
@@ -254,48 +295,56 @@ def main() -> None:
                 subprocess.run(["npu-smi", "info"], stdout=npu_log, check=True)
             with (run_dir / "server.log").open("wb") as server_log:
                 process = subprocess.Popen(
-                    server_cmd, stdout=server_log, stderr=subprocess.STDOUT,
-                    env=env, start_new_session=True,
+                    server_cmd,
+                    stdout=server_log,
+                    stderr=subprocess.STDOUT,
+                    env=env,
+                    start_new_session=True,
                 )
                 try:
                     wait_for_server(process, args.port, args.startup_timeout)
                     with (run_dir / "bench.log").open("wb") as bench_log:
                         subprocess.run(
-                            bench_cmd, stdout=bench_log, stderr=subprocess.STDOUT,
-                            env=env, check=True,
+                            bench_cmd,
+                            stdout=bench_log,
+                            stderr=subprocess.STDOUT,
+                            env=env,
+                            check=True,
                         )
                     metrics = http_get(f"http://127.0.0.1:{args.port}/metrics").decode()
                     (run_dir / "metrics.txt").write_text(metrics)
                     result = json.loads((run_dir / "result.json").read_text())
-                    record.update({
-                        "completed": result.get("completed"),
-                        "output_throughput": result.get("output_throughput"),
-                        "total_output_tokens": result.get("total_output_tokens"),
-                        "preemptions": metric_value(metrics, "vllm:num_preemptions_total"),
-                        "policy_calls": metric_value(
-                            metrics, "vllm:preemption_policy_events", "calls"
-                        ),
-                        "policy_selections": metric_value(
-                            metrics, "vllm:preemption_policy_events", "selections"
-                        ),
-                        "policy_failures": metric_value(
-                            metrics, "vllm:preemption_policy_events", "failures"
-                        ),
-                    })
+                    record.update(
+                        {
+                            "completed": result.get("completed"),
+                            "output_throughput": result.get("output_throughput"),
+                            "total_output_tokens": result.get("total_output_tokens"),
+                            "preemptions": metric_value(metrics, "vllm:num_preemptions_total"),
+                            "policy_calls": metric_value(
+                                metrics, "vllm:preemption_policy_events", "calls"
+                            ),
+                            "policy_selections": metric_value(
+                                metrics, "vllm:preemption_policy_events", "selections"
+                            ),
+                            "policy_failures": metric_value(
+                                metrics, "vllm:preemption_policy_events", "failures"
+                            ),
+                        }
+                    )
                     if record["completed"] != args.num_prompts:
                         raise RuntimeError(f"incomplete benchmark: {record['completed']} requests")
-                    if not isinstance(record["output_throughput"], (int, float)) or not math.isfinite(
-                        record["output_throughput"]
-                    ) or record["output_throughput"] <= 0:
+                    if (
+                        not isinstance(record["output_throughput"], (int, float))
+                        or not math.isfinite(record["output_throughput"])
+                        or record["output_throughput"] <= 0
+                    ):
                         raise RuntimeError("benchmark reported invalid output throughput")
                     if arm == "bidkv" and record["policy_calls"] <= 0:
                         raise RuntimeError("BidKV policy was not invoked; increase KV pressure")
                     if arm == "bidkv" and record["policy_failures"] > 0:
                         raise RuntimeError("BidKV policy failed; inspect metrics and server log")
                     records.append(record)
-                    summary_path.write_text(
-                        json.dumps(records, indent=2) + "\n"
-                    )
+                    summary_path.write_text(json.dumps(records, indent=2) + "\n")
                     print(
                         f"{arm} repeat={repeat + 1} output_throughput="
                         f"{record['output_throughput']:.3f} tok/s "
@@ -311,13 +360,10 @@ def main() -> None:
     for repeat in range(1, args.repeats + 1):
         pair = {row["arm"]: row for row in records if row["repeat"] == repeat}
         if len(pair) == 2:
-            if pair["bidkv"]["total_output_tokens"] != pair["baseline"][
-                "total_output_tokens"
-            ]:
+            if pair["bidkv"]["total_output_tokens"] != pair["baseline"]["total_output_tokens"]:
                 raise RuntimeError(f"repeat {repeat}: output-token totals differ across arms")
             delta = 100 * (
-                pair["bidkv"]["output_throughput"]
-                / pair["baseline"]["output_throughput"] - 1
+                pair["bidkv"]["output_throughput"] / pair["baseline"]["output_throughput"] - 1
             )
             print(f"repeat={repeat} BidKV output throughput delta={delta:+.2f}%")
 

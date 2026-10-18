@@ -44,8 +44,6 @@ def _diag(msg: str) -> None:
         f.write(f"[{os.getpid()}] adapter: {msg}\n")
 
 
-
-
 class VLLMAdapter(FrameworkAdapter):
     """BidKV 在 vLLM 框架上的适配器。
 

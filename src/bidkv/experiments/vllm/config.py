@@ -203,9 +203,7 @@ class ExperimentConfig:
     traces_dir: Path = Path("experiments/vllm/traces")
     warmup_requests: int = 5
     request_timeout_s: float = 120.0
-    server_startup_timeout_s: float = float(
-        os.environ.get("BIDKV_SERVER_STARTUP_TIMEOUT", "300")
-    )
+    server_startup_timeout_s: float = float(os.environ.get("BIDKV_SERVER_STARTUP_TIMEOUT", "300"))
     collect_candidate_snapshots: bool = True
     consecutive_timeout_abort: int = 10
     run_timeout_s: float = 600.0

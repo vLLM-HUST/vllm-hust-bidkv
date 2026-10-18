@@ -90,12 +90,8 @@ class BidkvSelectorConfig:
             utility_kv_gate=_env_float("BIDKV_UTILITY_KV_GATE", "0.0"),
             utility_cooldown_s=_env_float("BIDKV_UTILITY_COOLDOWN_S", "0.0"),
             utility_min_running=_env_int("BIDKV_UTILITY_MIN_RUNNING", "1"),
-            utility_liveness_preemptions=_env_int(
-                "BIDKV_UTILITY_LIVENESS_PREEMPTIONS", "2"
-            ),
-            utility_cascade_gain_ratio=_env_float(
-                "BIDKV_UTILITY_CASCADE_GAIN_RATIO", "1.25"
-            ),
+            utility_liveness_preemptions=_env_int("BIDKV_UTILITY_LIVENESS_PREEMPTIONS", "2"),
+            utility_cascade_gain_ratio=_env_float("BIDKV_UTILITY_CASCADE_GAIN_RATIO", "1.25"),
             utility_snapshot_enabled=_env_bool("BIDKV_UTILITY_SNAPSHOT_ENABLED"),
             utility_snapshot_top_k=_env_int("BIDKV_UTILITY_SNAPSHOT_TOP_K", "3"),
             utility_snapshot_history_size=_env_int("BIDKV_UTILITY_SNAPSHOT_HISTORY_SIZE", "32"),
@@ -560,8 +556,7 @@ class BidkvPreemptionPolicy:
         top = ranked_candidates[0]
         top_relative_preemptions = max(
             0,
-            top.num_preemptions
-            - self._liveness_preemption_offsets.get(top.request_id, 0),
+            top.num_preemptions - self._liveness_preemption_offsets.get(top.request_id, 0),
         )
         if liveness_threshold > 0 and top_relative_preemptions >= liveness_threshold:
             # A per-victim bound is required here. Requiring every runnable
@@ -610,8 +605,7 @@ class BidkvPreemptionPolicy:
         if (
             requester is not None
             and requester.request_id != top.request_id
-            and requester.tokens_freed * self.config.utility_cascade_gain_ratio
-            >= top.tokens_freed
+            and requester.tokens_freed * self.config.utility_cascade_gain_ratio >= top.tokens_freed
         ):
             # A marginal gain is not worth changing the scheduler's stable
             # progress order. Selecting the requesting request here can reset

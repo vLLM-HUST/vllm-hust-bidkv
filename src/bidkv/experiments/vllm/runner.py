@@ -103,9 +103,7 @@ class VLLMExperimentRunner:
         self._run_deadline: float = float("inf")
         # Bypass http_proxy for all localhost HTTP calls — proxies may cache
         # stale 502 responses from the engine-not-ready startup phase.
-        self._http_opener = urllib.request.build_opener(
-            urllib.request.ProxyHandler({})
-        )
+        self._http_opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
     @property
     def config(self) -> ExperimentConfig:

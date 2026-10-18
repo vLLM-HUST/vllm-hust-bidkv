@@ -753,6 +753,7 @@ class TestPressureDetectorInstantaneous:
         detector.update_stats(used_tokens=900, max_tokens=1000)
         assert detector.is_under_pressure()
 
+
 # ===========================================================================
 # Fix S07 #024: KV 统计唯一来源 + solve_with_detector
 # ===========================================================================
@@ -852,4 +853,3 @@ class TestSolveWithDetector:
         solver = GreedyBidSolver(SolverConfig(enabled=False))
         result = solver.solve_with_detector(pool, detector)
         assert result.is_empty
-

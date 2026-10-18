@@ -187,6 +187,5 @@ class SGLangExperimentConfig:
         unknown = set(self.strategies) - set(EXTENDED_STRATEGIES)
         if unknown:
             raise ValueError(
-                f"Unknown strategies: {unknown}. "
-                f"Valid strategies: {EXTENDED_STRATEGIES}"
+                f"Unknown strategies: {unknown}. Valid strategies: {EXTENDED_STRATEGIES}"
             )
