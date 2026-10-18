@@ -1,0 +1,175 @@
+name: Conditional source and package CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  source-package:
+    name: CPU source and clean wheel / Python ${{ matrix.python }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12"]
+    runs-on: ubuntu-latest
+    env:
+      MANAGER_REQUIREMENT: "vllm-hust-ext @ git+https://github.com/vLLM-HUST/extension-manager.git@8f2582d9cc22e32055b07c7193655ef0c56367c2"
+      ECPA_CI_PACKAGE: "vllm-hust-bidkv"
+      ECPA_CI_VERSION: "0.2.2.dev1"
+      ECPA_CI_MANIFEST: "bidkv/manifests/vllm-hust-extension-v0.3.json"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install pinned schema and source test dependencies
+        run: |
+          python -m pip install "$MANAGER_REQUIREMENT"
+          python -m pip install -e . "pytest>=7.0" "pytest-cov>=4.0" "ruff>=0.4.0" "build>=1.2"
+      - name: Check dependencies and installed Manager source pin
+        shell: bash
+        run: |
+          python -m pip check
+          python - <<'PYTHON'
+          import hashlib
+          import importlib.metadata
+          import json
+          from pathlib import Path
+
+
+          def verify_installed_manager():
+              distribution = importlib.metadata.distribution("vllm-hust-ext")
+              assert distribution.version == "0.3.0"
+              direct = json.loads(distribution.read_text("direct_url.json"))
+              assert direct["url"].removesuffix(".git") == "https://github.com/vLLM-HUST/extension-manager"
+              assert direct["vcs_info"]["vcs"] == "git"
+              assert direct["vcs_info"]["commit_id"] == "8f2582d9cc22e32055b07c7193655ef0c56367c2"
+              assert direct["vcs_info"]["requested_revision"] == "8f2582d9cc22e32055b07c7193655ef0c56367c2"
+              assert direct.get("dir_info", {}).get("editable") is not True
+              expected = {'vllm_hust_ext/manifest.py': 'e6ee759722a9462c3fba9846fdd6c882ba7a25758a3c5954f9327018d7da8b06', 'vllm_hust_ext/providers/vllm.py': 'a0aa7ab8dc55035e2c8c52ffcc323b7628c31cbbb7052d2bfc5468edfc29cff3'}
+              actual = {}
+              for relative, digest in expected.items():
+                  path = Path(distribution.locate_file(relative))
+                  assert path.is_file() and not path.is_symlink()
+                  actual[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+                  assert actual[relative] == digest
+              return {"distribution": "vllm-hust-ext", "version": distribution.version,
+                      "source_commit": direct["vcs_info"]["commit_id"],
+                      "source_url": direct["url"], "installed_sources": actual,
+                      "runtime_qualification": None, "formal_result": False}
+
+          import os
+          result = verify_installed_manager()
+          (Path(os.environ["GITHUB_WORKSPACE"]) / "ci-manager-pin-before-tests.json").write_text(json.dumps(result, indent=2) + "\n")
+          PYTHON
+      - run: ruff check .
+      - run: ruff format --check .
+      - name: All CPU source regression tests
+        run: pytest -q
+      - name: Build official checked-out source artifacts
+        run: python -m build
+      - name: Independent clean wheel installation
+        shell: bash
+        run: |
+          python -m venv "$RUNNER_TEMP/conditional-clean"
+          "$RUNNER_TEMP/conditional-clean/bin/python" -m pip install "$MANAGER_REQUIREMENT"
+          "$RUNNER_TEMP/conditional-clean/bin/python" -m pip install --no-deps dist/*.whl
+          "$RUNNER_TEMP/conditional-clean/bin/python" -m pip check
+          export ECPA_CI_WHEEL_DIRECTORY="$GITHUB_WORKSPACE/dist"
+          export ECPA_CI_SOURCE_COMMIT="$(git rev-parse HEAD)"
+          export ECPA_CI_SOURCE_TREE="$(git rev-parse HEAD^{tree})"
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/conditional-clean/bin/python" -I - <<'PYTHON'
+          import hashlib
+          import importlib.metadata
+          import json
+          import os
+          from pathlib import Path
+          import zipfile
+
+          import hashlib
+          import importlib.metadata
+          import json
+          from pathlib import Path
+
+
+          def verify_installed_manager():
+              distribution = importlib.metadata.distribution("vllm-hust-ext")
+              assert distribution.version == "0.3.0"
+              direct = json.loads(distribution.read_text("direct_url.json"))
+              assert direct["url"].removesuffix(".git") == "https://github.com/vLLM-HUST/extension-manager"
+              assert direct["vcs_info"]["vcs"] == "git"
+              assert direct["vcs_info"]["commit_id"] == "8f2582d9cc22e32055b07c7193655ef0c56367c2"
+              assert direct["vcs_info"]["requested_revision"] == "8f2582d9cc22e32055b07c7193655ef0c56367c2"
+              assert direct.get("dir_info", {}).get("editable") is not True
+              expected = {'vllm_hust_ext/manifest.py': 'e6ee759722a9462c3fba9846fdd6c882ba7a25758a3c5954f9327018d7da8b06', 'vllm_hust_ext/providers/vllm.py': 'a0aa7ab8dc55035e2c8c52ffcc323b7628c31cbbb7052d2bfc5468edfc29cff3'}
+              actual = {}
+              for relative, digest in expected.items():
+                  path = Path(distribution.locate_file(relative))
+                  assert path.is_file() and not path.is_symlink()
+                  actual[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+                  assert actual[relative] == digest
+              return {"distribution": "vllm-hust-ext", "version": distribution.version,
+                      "source_commit": direct["vcs_info"]["commit_id"],
+                      "source_url": direct["url"], "installed_sources": actual,
+                      "runtime_qualification": None, "formal_result": False}
+
+          manager_pin = verify_installed_manager()
+
+          from vllm_hust_ext.manifest import load_manifest
+
+          distribution = importlib.metadata.distribution(os.environ["ECPA_CI_PACKAGE"])
+          assert distribution.version == os.environ["ECPA_CI_VERSION"]
+          direct = json.loads(distribution.read_text("direct_url.json"))
+          assert direct.get("dir_info", {}).get("editable") is not True
+          wheels = list(Path(os.environ["ECPA_CI_WHEEL_DIRECTORY"]).glob("*.whl"))
+          assert len(wheels) == 1
+          wheel = wheels[0]
+          files = {}
+          with zipfile.ZipFile(wheel) as archive:
+              for entry in archive.infolist():
+                  if entry.is_dir() or entry.filename.endswith(".dist-info/RECORD"):
+                      continue
+                  expected = archive.read(entry)
+                  installed = Path(distribution.locate_file(entry.filename))
+                  assert installed.is_file() and installed.read_bytes() == expected
+                  files[entry.filename] = hashlib.sha256(expected).hexdigest()
+          manifest_path = Path(distribution.locate_file(os.environ["ECPA_CI_MANIFEST"]))
+          manifest = load_manifest(manifest_path)
+          assert manifest.bundle_version == distribution.version
+          profile = dict(manifest.activation.additional_config)["_manager_runtime_qualification"]
+          assert "status" not in profile
+          result = {
+              "schema": "ecpa-conditional-cpu-source-package-ci/v1",
+              "source_commit": os.environ["ECPA_CI_SOURCE_COMMIT"],
+              "source_tree": os.environ["ECPA_CI_SOURCE_TREE"],
+              "package": os.environ["ECPA_CI_PACKAGE"],
+              "version": distribution.version,
+              "wheel_sha256": hashlib.sha256(wheel.read_bytes()).hexdigest(),
+              "installed_files": files,
+              "Manager_source_commit": "8f2582d9cc22e32055b07c7193655ef0c56367c2",
+              "Manager_installed_pin": manager_pin,
+              "runtime_qualification": None,
+              "NPU_execution": False,
+              "formal_result": False,
+          }
+          output = Path(os.environ["GITHUB_WORKSPACE"]) / "cpu-source-package-proof.json"
+          output.write_text(json.dumps(result, indent=2) + "\n")
+          PYTHON
+      - name: Preserve source artifacts and clean-install proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CPU-source-package-${{ matrix.python }}
+          path: |
+            dist/*
+            cpu-source-package-proof.json
+            ci-manager-pin-before-tests.json
+          if-no-files-found: warn

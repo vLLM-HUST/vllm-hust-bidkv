@@ -413,7 +413,7 @@ class TestBidKV:
                 token_ids=tuple(range(400)),
                 num_prompt_tokens=100,
                 num_computed_tokens=400,  # output_tokens=300
-                max_output_tokens=512,   # 300/512=58%, not near done
+                max_output_tokens=512,  # 300/512=58%, not near done
             ),
         ]
         strategy = BidKVStrategy()

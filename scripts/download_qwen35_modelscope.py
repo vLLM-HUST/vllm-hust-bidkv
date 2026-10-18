@@ -17,7 +17,6 @@ import sys
 from pathlib import Path
 from urllib.parse import quote
 
-
 MODEL_URL = "https://modelscope.cn/models/Qwen/Qwen3.5-35B-A3B/resolve/master"
 
 
@@ -44,11 +43,15 @@ def download(entry: dict, target: Path) -> str:
     blob_oid = entry.get("oid") if digest is None else None
     target_path = target / relative
     target_path.parent.mkdir(parents=True, exist_ok=True)
-    if target_path.exists() and target_path.stat().st_size == size:
-        if (digest is not None and sha256_file(target_path) == digest) or (
-            blob_oid is not None and git_blob_sha1(target_path, size) == blob_oid
-        ):
-            return f"verified {relative}"
+    if (
+        target_path.exists()
+        and target_path.stat().st_size == size
+        and (
+            (digest is not None and sha256_file(target_path) == digest)
+            or (blob_oid is not None and git_blob_sha1(target_path, size) == blob_oid)
+        )
+    ):
+        return f"verified {relative}"
 
     partial = target_path.with_name(target_path.name + ".part")
     if partial.exists() and partial.stat().st_size > size:
@@ -58,10 +61,28 @@ def download(entry: dict, target: Path) -> str:
     for key in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"):
         env.pop(key, None)
     command = [
-        "curl", "--noproxy", "*", "--fail", "--location", "--silent", "--show-error",
-        "--retry", "8", "--retry-delay", "3", "--connect-timeout", "20",
-        "--speed-limit", "1024", "--speed-time", "120",
-        "--continue-at", "-", "--output", str(partial), url,
+        "curl",
+        "--noproxy",
+        "*",
+        "--fail",
+        "--location",
+        "--silent",
+        "--show-error",
+        "--retry",
+        "8",
+        "--retry-delay",
+        "3",
+        "--connect-timeout",
+        "20",
+        "--speed-limit",
+        "1024",
+        "--speed-time",
+        "120",
+        "--continue-at",
+        "-",
+        "--output",
+        str(partial),
+        url,
     ]
     result = subprocess.run(command, env=env, text=True, capture_output=True)
     if result.returncode:

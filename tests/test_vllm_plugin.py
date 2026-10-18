@@ -89,8 +89,8 @@ def test_experimental_extension_manifest_matches_native_policy() -> None:
     assert manifest["host"] == {
         "provider": "vllm",
         "name": "vllm",
-        "version_range": ">=0.28.1rc1.dev319,<0.29",
-        "api_range": ">=1,<2",
+        "version_range": ">=0.31.1.post1.dev19,<0.31.1.post1.dev20",
+        "api_range": "==1.0",
     }
     assert manifest["runtime"]["process_scope"] == "scheduler"
     assert manifest["lifecycle_owner"] == "vllm"
@@ -123,38 +123,16 @@ def test_experimental_extension_manifest_matches_native_policy() -> None:
         },
         "additional_config": {
             "_manager_runtime_qualification": {
-                "accelerator": "ascend",
-                "execution_mode": "graph",
-                "model": "Qwen3.8-27B",
-                "tensor_parallel_size": 4,
-                "functional_compatibility": {
-                    "status": "passed",
-                    "scope": "Qwen3.8-27B / Ascend TP4 / FULL_DECODE_ONLY graph",
-                },
-                "effectiveness_qualifications": [
-                    {
-                        "status": "inconclusive",
-                        "scope": "ascending mixed / concurrency=4 / 1-GiB KV pressure / n=3",
-                        "reason": (
-                            "The policy was not invoked in every repeat and the "
-                            "paired intervals overlap."
-                        ),
-                    },
-                    {
-                        "status": "not-beneficial-in-tested-cell",
-                        "scope": "interactive batch / concurrency=8 / 1-GiB KV pressure / n=3",
-                        "reason": (
-                            "Throughput delta mean -25.31% (95% CI -26.66% to "
-                            "-23.96%); P95 latency delta mean +34.57% (95% CI "
-                            "+31.96% to +37.17%)."
-                        ),
-                    },
-                ],
-                "runtime_state_source": "live_instance_observation_only",
-                "tested_runtime_commit": (
-                    "199e0bdc6fc38fc9b14b626515efdcbf81de0b62"
-                ),
-                "evidence": "docs/evidence/sage-mate-20260905-bounded-preemption-matrix.md",
+                "domain": "new-H4-conditional-scheduler-PP2-TP1",
+                "host_commit": "f7bc2a5eebc505f28abfbf318734225e4c30c64c",
+                "host_tree": "9ee4ce4dbcb4f685df8713fb1c33a53d7221ba27",
+                "model": "/models/Qwen2.5-7B-Instruct",
+                "pipeline_parallel_size": 2,
+                "tensor_parallel_size": 1,
+                "max_num_seqs": 1,
+                "warmup_requests": 16,
+                "measured_requests": 256,
+                "selected_requests": 32,
             },
         },
     }

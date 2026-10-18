@@ -152,12 +152,14 @@ def aggregate_results(
         pressure_events = [float(r.adapter_metrics.get("total_pressure_events", 0)) for r in group]
         # 全量 preemption（含 native LIFO）——新字段，旧数据不存在则回落到 total_evictions
         total_all_preempts = [
-            float(r.adapter_metrics.get("total_all_preemptions", _get_evictions(r)))
-            for r in group
+            float(r.adapter_metrics.get("total_all_preemptions", _get_evictions(r))) for r in group
         ]
         total_all_freed = [
-            float(r.adapter_metrics.get("total_all_tokens_freed",
-                                        r.adapter_metrics.get("total_tokens_freed", 0)))
+            float(
+                r.adapter_metrics.get(
+                    "total_all_tokens_freed", r.adapter_metrics.get("total_tokens_freed", 0)
+                )
+            )
             for r in group
         ]
 
@@ -456,8 +458,13 @@ def _plot_eviction_coverage(
     """
     import matplotlib.pyplot as plt
 
-    PAPER_STRATEGIES = ["preempt-evict", "preempt-evict-sjf", "static-random",
-                        "largest-first", "bidkv"]
+    PAPER_STRATEGIES = [
+        "preempt-evict",
+        "preempt-evict-sjf",
+        "static-random",
+        "largest-first",
+        "bidkv",
+    ]
     STRATEGY_LABELS = {
         "preempt-evict": "PE",
         "preempt-evict-sjf": "PE-SJF",
@@ -466,11 +473,11 @@ def _plot_eviction_coverage(
         "bidkv": "BidKV",
     }
     COLORS = {
-        "preempt-evict":     "#7f7f7f",
+        "preempt-evict": "#7f7f7f",
         "preempt-evict-sjf": "#aec7e8",
-        "static-random":     "#ffbb78",
-        "largest-first":     "#98df8a",
-        "bidkv":             "#1f77b4",
+        "static-random": "#ffbb78",
+        "largest-first": "#98df8a",
+        "bidkv": "#1f77b4",
     }
 
     # 优先取 mixed × rate=3.8；若无则回退到 long_context 最高 rate
@@ -503,10 +510,16 @@ def _plot_eviction_coverage(
         if match:
             a = match[0]
             # 优先用新字段（含 native LIFO），回退旧字段
-            ev = a.total_all_preemptions_mean if a.total_all_preemptions_mean > 0 \
+            ev = (
+                a.total_all_preemptions_mean
+                if a.total_all_preemptions_mean > 0
                 else a.total_evictions_mean
-            fr = a.total_all_tokens_freed_mean if a.total_all_tokens_freed_mean > 0 \
+            )
+            fr = (
+                a.total_all_tokens_freed_mean
+                if a.total_all_tokens_freed_mean > 0
                 else a.total_tokens_freed_mean
+            )
         else:
             ev = 0.0
             fr = 0.0
@@ -529,15 +542,24 @@ def _plot_eviction_coverage(
 
     # Left bars: reclamation count（左 Y 轴，实心）
     bars1 = ax1.bar(
-        [xi - bar_w / 2 for xi in x_pos], evict_counts, bar_w,
-        color=colors, edgecolor="black", linewidth=0.7,
+        [xi - bar_w / 2 for xi in x_pos],
+        evict_counts,
+        bar_w,
+        color=colors,
+        edgecolor="black",
+        linewidth=0.7,
         label="Reclamation Count (All Paths)",
     )
     # Right bars: tokens freed ×1000（右 Y 轴，斜线纹理 + 半透明）
     bars2 = ax2.bar(
-        [xi + bar_w / 2 for xi in x_pos], tokens_freed_k, bar_w,
-        color=colors, edgecolor="black", linewidth=0.7,
-        hatch="//", alpha=0.6,
+        [xi + bar_w / 2 for xi in x_pos],
+        tokens_freed_k,
+        bar_w,
+        color=colors,
+        edgecolor="black",
+        linewidth=0.7,
+        hatch="//",
+        alpha=0.6,
         label="Tokens Freed (×1000)",
     )
 
@@ -552,8 +574,14 @@ def _plot_eviction_coverage(
     # 数值标签
     for bar, val in zip(bars1, evict_counts, strict=False):
         if val > 0:
-            ax1.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + max(evict_counts) * 0.01,
-                     f"{val:.0f}", ha="center", va="bottom", fontsize=8)
+            ax1.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + max(evict_counts) * 0.01,
+                f"{val:.0f}",
+                ha="center",
+                va="bottom",
+                fontsize=8,
+            )
     for bar, val in zip(bars2, tokens_freed_k, strict=False):
         if val > 0:
             ax2.text(
@@ -582,6 +610,7 @@ def _plot_eviction_coverage(
     paper_figures = path.resolve().parent.parent.parent.parent.parent / "paper" / "figures"
     if paper_figures.is_dir():
         import shutil
+
         paper_dest = paper_figures / "fig5_compress_coverage.pdf"
         shutil.copy2(str(path), str(paper_dest))
         logger.info("Copied to paper figures: %s", paper_dest)

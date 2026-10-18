@@ -260,7 +260,8 @@ def _reorder_waiting_for_admission(scheduler: Any, adapter: SGLangAdapter) -> No
         return
 
     if strategy_name in (
-        "sglang_default", "preempt-evict",
+        "sglang_default",
+        "preempt-evict",
     ):
         # FCFS — no reorder.
         return
@@ -269,9 +270,11 @@ def _reorder_waiting_for_admission(scheduler: Any, adapter: SGLangAdapter) -> No
         # SJF strategies (static-random, bidkv): SJF by prompt_tokens.
         waiting_list = list(waiting)
         waiting_list.sort(
-            key=lambda r: getattr(r, "num_prompt_tokens", 0)
-            or getattr(r, "origin_input_ids_unpadded_length", 0)
-            or 0
+            key=lambda r: (
+                getattr(r, "num_prompt_tokens", 0)
+                or getattr(r, "origin_input_ids_unpadded_length", 0)
+                or 0
+            )
         )
         waiting.clear()
         for req in waiting_list:
@@ -361,10 +364,9 @@ def _refresh_priority_cache(scheduler: Any, adapter: SGLangAdapter) -> None:
     if len(candidates) < 2:
         return
 
-    needed_all = sum(
-        c.private_tokens if c.private_tokens > 0 else c.current_tokens
-        for c in candidates
-    ) or 1
+    needed_all = (
+        sum(c.private_tokens if c.private_tokens > 0 else c.current_tokens for c in candidates) or 1
+    )
 
     try:
         actions = strategy.select_victims(candidates, needed_all)
@@ -492,7 +494,9 @@ def _proactive_srpt(scheduler: Any, adapter: SGLangAdapter) -> None:
     strategy_name = adapter._experiment_strategy_name
 
     if strategy_name in (
-        "sglang_default", "preempt-evict", "preempt-evict-sjf",
+        "sglang_default",
+        "preempt-evict",
+        "preempt-evict-sjf",
     ):
         return
 
@@ -620,8 +624,7 @@ def _build_running_candidates(
                 RequestState(
                     request_id=rid,
                     current_tokens=(
-                        num_computed if num_computed > 0
-                        else (len(token_ids) if token_ids else 0)
+                        num_computed if num_computed > 0 else (len(token_ids) if token_ids else 0)
                     ),
                     token_ids=tuple(token_ids) if token_ids else (),
                     priority=priority,

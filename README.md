@@ -79,8 +79,10 @@ assert not config.is_active
 from bidkv import (
     BaselineRegistry,
     BidKVStrategy,
-    PreemptEvictStrategy, LargestFirstStrategy,
-    StaticRandomStrategy, PreemptEvictSJFStrategy,
+    PreemptEvictStrategy,
+    LargestFirstStrategy,
+    StaticRandomStrategy,
+    PreemptEvictSJFStrategy,
 )
 
 # Register all built-in strategies at once
@@ -93,7 +95,7 @@ registry2.register(BidKVStrategy())
 registry2.register(PreemptEvictStrategy())
 
 strategy = registry2.get("bidkv")
-print(strategy.name)              # "bidkv"
+print(strategy.name)  # "bidkv"
 print(registry2.list_strategies())  # ["bidkv", "preempt-evict"]
 ```
 

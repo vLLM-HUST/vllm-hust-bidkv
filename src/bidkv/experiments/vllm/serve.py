@@ -39,13 +39,9 @@ def _legacy_entry_point_installed() -> bool:
         candidates = discovered.select(group="vllm.general_plugins", name="bidkv")
     else:  # pragma: no cover - Python 3.10 compatibility
         candidates = [
-            item
-            for item in discovered.get("vllm.general_plugins", ())
-            if item.name == "bidkv"
+            item for item in discovered.get("vllm.general_plugins", ()) if item.name == "bidkv"
         ]
-    return any(
-        item.value == "bidkv.adapters.vllm.plugin:register" for item in candidates
-    )
+    return any(item.value == "bidkv.adapters.vllm.plugin:register" for item in candidates)
 
 
 def main() -> None:

@@ -808,6 +808,7 @@ def _patched_free_request(scheduler: Any, adapter: VLLMAdapter, request: Any, **
     if request_id is not None:
         # 记录最终 output token 数，用于前置实验 completion_ratio join
         from bidkv.adapters.vllm import preemption_logger as _plogger
+
         if _plogger.is_active():
             num_computed = getattr(request, "num_computed_tokens", 0)
             num_prompt = getattr(request, "num_prompt_tokens", 0)

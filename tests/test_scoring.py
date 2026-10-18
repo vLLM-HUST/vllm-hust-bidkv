@@ -408,4 +408,3 @@ class TestBidKVStrategyScorerAgnostic:
 
         strategy = BidKVStrategy()
         assert isinstance(strategy.scoring, PositionalScoring)
-
