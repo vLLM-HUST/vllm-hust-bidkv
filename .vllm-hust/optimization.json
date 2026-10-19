@@ -16,10 +16,12 @@
       "BIDKV_UTILITY_ENABLE": "1",
       "BIDKV_UTILITY_STRATEGY": "bidkv",
       "BIDKV_UTILITY_LIVENESS_PREEMPTIONS": "2",
-      "BIDKV_UTILITY_CASCADE_GAIN_RATIO": "1.25"
+      "BIDKV_UTILITY_CASCADE_GAIN_RATIO": "1.25",
+      "BIDKV_RUNTIME_CONTRACT": "{\"architecture\":\"Qwen3_5MoeForConditionalGeneration\",\"cudagraph_mode\":\"FULL_DECODE_ONLY\",\"data_parallel_size\":1,\"dtype\":\"bfloat16\",\"enforce_eager\":false,\"model_type\":\"qwen3_5_moe\",\"pipeline_parallel_size\":1,\"profile_id\":\"inference-engine-qwen35-tp2-graph-v1\",\"qualification_status\":\"unqualified-development-candidate\",\"schema_version\":1,\"tensor_parallel_size\":2}"
     },
     "extra_env_prefixes": [
-      "BIDKV_UTILITY_"
+      "BIDKV_UTILITY_",
+      "BIDKV_RUNTIME_"
     ],
     "extra_args": [
       "--preemption-policy",
@@ -54,6 +56,14 @@
         "tested_runtime_commit": "199e0bdc6fc38fc9b14b626515efdcbf81de0b62",
         "evidence": "docs/evidence/sage-mate-20260905-bounded-preemption-matrix.md",
         "superseded_single_run_evidence": "docs/evidence/sage-mate-20260905-current-main-tp4-graph.md"
+      },
+      {
+        "model": "Qwen3.5-35B-A3B",
+        "tensor_parallel_size": 2,
+        "pipeline_parallel_size": 1,
+        "execution_mode": "FULL_DECODE_ONLY",
+        "status": "unqualified-development-candidate",
+        "evidence": "No model or performance qualification is inherited from TP4."
       }
     ]
   }

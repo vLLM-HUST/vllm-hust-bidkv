@@ -119,7 +119,47 @@ HF_HUB_OFFLINE=1 python -m bidkv.experiments.sglang.runner \
     --output-dir results/sglang_experiment
 ```
 
+## Qwen3.5 TP2 development adaptation
+
+This branch targets the inference-engine project's existing Qwen3.5-35B-A3B
+BF16 / Ascend TP2 / PP1 / DP1 / FULL_DECODE_ONLY configuration. It remains a
+**development candidate**, without a new functional or performance qualification.
+The host, graph, cache and dataset settings remain owned by that project.
+
+This adaptation is based on BidKV commit
+`6f1fc75d694c6901051bdeae784d18b836c6fa70` and retains its Host 0.28 manifest
+range. It is a separate branch from the Host 0.31 / PP2 / TP1 declaration now on
+upstream main. The project's frozen HUST Core and Ascend source commits are
+`ce5e49034a40d34fe88d78e4707c629449c3a5a2` and
+`a9dd32033c5669ba28976c9d208a69d762796ba9`, respectively; use the project's
+unified runtime instructions and frozen test profiles.
+
+Prior local MMLU-Pro measurements covered three paired Native/BidKV starts,
+200 performance questions and an overlapping 70-question quality subset.
+Both arms scored 56/70 in every start, but policy calls and preemptions were
+zero, and no stable cost reduction was established. Those measurements used
+the earlier local runtime build, not the newly prepared unified SDK. They do
+not qualify pressure behavior or gains on the frozen unified runtime.
+
+The 0.2.2.dev3 manifest declares a plugin-owned `BIDKV_RUNTIME_CONTRACT`
+environment value, rather than injecting unknown keys into Ascend additional_config. The policy factory
+checks the effective model architecture, dtype, topology and graph mode and
+rejects mismatches before accepting the policy. Manager still checks the host
+version/API/protocol and exclusive scheduler slot; its implementation is not
+modified. The former Qwen3.8 TP4 qualification is retained in
+[`docs/evidence/qwen38-tp4-manifest-qualification.json`](docs/evidence/qwen38-tp4-manifest-qualification.json)
+and its original evidence, instead of being claimed for this new target.
+Manager admission is only permission to test the declared target: actual model
+execution, policy calls, task quality and matched cost must be checked separately.
+
 ## Framework Integration (vLLM)
+
+The TP4 commands and qualification below describe the historical target, not
+the default Qwen3.5 TP2 development activation on this branch. Use the current
+project profile and [`scripts/run_project_admission.py`](scripts/run_project_admission.py)
+for finite admission; it requires an explicit frozen input profile and the
+project's graph observer. Actual model launches remain under the project's
+device admission and Extension Manager controls.
 
 The Sage Mate target at vLLM-HUST `762f85b3` (`0.28.1rc1.dev319`) exposes the
 immutable `vllm.preemption-policy.v1` contract. BidKV supplies

@@ -315,7 +315,12 @@ class BidkvPreemptionPolicy:
 
     @classmethod
     def from_vllm_config(cls, vllm_config) -> BidkvPreemptionPolicy:
-        return cls(BidkvSelectorConfig.from_vllm_config(vllm_config))
+        from bidkv.adapters.vllm_hust.runtime_contract import validate_runtime_contract
+
+        receipt = validate_runtime_contract(vllm_config)
+        policy = cls(BidkvSelectorConfig.from_vllm_config(vllm_config))
+        policy.runtime_target = receipt
+        return policy
 
     # -- Public API (PreemptionPolicy protocol) ----------------------------
 

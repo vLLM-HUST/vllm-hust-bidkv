@@ -1,7 +1,7 @@
 {
   "schema_version": "0.3-experimental",
   "extension_id": "org.vllm-hust.bidkv",
-  "extension_version": "0.2.1",
+  "extension_version": "0.2.2.dev3",
   "kind": "scheduler_policy",
   "host": {
     "provider": "vllm",
@@ -58,34 +58,9 @@
       "BIDKV_UTILITY_ENABLE": "1",
       "BIDKV_UTILITY_STRATEGY": "bidkv",
       "BIDKV_UTILITY_LIVENESS_PREEMPTIONS": "2",
-      "BIDKV_UTILITY_CASCADE_GAIN_RATIO": "1.25"
+      "BIDKV_UTILITY_CASCADE_GAIN_RATIO": "1.25",
+      "BIDKV_RUNTIME_CONTRACT": "{\"architecture\":\"Qwen3_5MoeForConditionalGeneration\",\"cudagraph_mode\":\"FULL_DECODE_ONLY\",\"data_parallel_size\":1,\"dtype\":\"bfloat16\",\"enforce_eager\":false,\"model_type\":\"qwen3_5_moe\",\"pipeline_parallel_size\":1,\"profile_id\":\"inference-engine-qwen35-tp2-graph-v1\",\"qualification_status\":\"unqualified-development-candidate\",\"schema_version\":1,\"tensor_parallel_size\":2}"
     },
-    "additional_config": {
-      "_manager_runtime_qualification": {
-        "accelerator": "ascend",
-        "execution_mode": "graph",
-        "model": "Qwen3.8-27B",
-        "tensor_parallel_size": 4,
-        "functional_compatibility": {
-          "status": "passed",
-          "scope": "Qwen3.8-27B / Ascend TP4 / FULL_DECODE_ONLY graph"
-        },
-        "effectiveness_qualifications": [
-          {
-            "status": "inconclusive",
-            "scope": "ascending mixed / concurrency=4 / 1-GiB KV pressure / n=3",
-            "reason": "The policy was not invoked in every repeat and the paired intervals overlap."
-          },
-          {
-            "status": "not-beneficial-in-tested-cell",
-            "scope": "interactive batch / concurrency=8 / 1-GiB KV pressure / n=3",
-            "reason": "Throughput delta mean -25.31% (95% CI -26.66% to -23.96%); P95 latency delta mean +34.57% (95% CI +31.96% to +37.17%)."
-          }
-        ],
-        "runtime_state_source": "live_instance_observation_only",
-        "tested_runtime_commit": "199e0bdc6fc38fc9b14b626515efdcbf81de0b62",
-        "evidence": "docs/evidence/sage-mate-20260905-bounded-preemption-matrix.md"
-      }
-    }
+    "additional_config": {}
   }
 }

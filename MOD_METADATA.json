@@ -48,6 +48,21 @@
       "Qwen3.8-27B — artifact functional qualified; effectiveness matrix incomplete",
       "Qwen3-0.6B — historical 0.23 lane",
       "Qwen2.5-3B — historical 0.23 lane"
+    ],
+    "development_targets": [
+      {
+        "model": "Qwen3.5-35B-A3B",
+        "dtype": "bfloat16",
+        "tensor_parallel_size": 2,
+        "pipeline_parallel_size": 1,
+        "execution_mode": "FULL_DECODE_ONLY",
+        "candidate_version": "0.2.2.dev3",
+        "status": "finite-synthetic-graph-admission-passed",
+        "policy_exercised": false,
+        "formal_task_quality_qualified": false,
+        "performance_qualified": false,
+        "note": "Native/candidate16 unique synthetic inputs, one warmup+three repeats,64 requests/arm; full output equivalence and rank0/1 graph replay; policy calls0. Not a formal dataset score or cost qualification."
+      }
     ]
   }
 }

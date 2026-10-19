@@ -113,51 +113,21 @@ def test_experimental_extension_manifest_matches_native_policy() -> None:
             "permissions": [],
         }
     ]
-    assert manifest["activation"] == {
-        "entry_points": [],
-        "environment": {
-            "BIDKV_UTILITY_ENABLE": "1",
-            "BIDKV_UTILITY_STRATEGY": "bidkv",
-            "BIDKV_UTILITY_LIVENESS_PREEMPTIONS": "2",
-            "BIDKV_UTILITY_CASCADE_GAIN_RATIO": "1.25",
-        },
-        "additional_config": {
-            "_manager_runtime_qualification": {
-                "accelerator": "ascend",
-                "execution_mode": "graph",
-                "model": "Qwen3.8-27B",
-                "tensor_parallel_size": 4,
-                "functional_compatibility": {
-                    "status": "passed",
-                    "scope": "Qwen3.8-27B / Ascend TP4 / FULL_DECODE_ONLY graph",
-                },
-                "effectiveness_qualifications": [
-                    {
-                        "status": "inconclusive",
-                        "scope": "ascending mixed / concurrency=4 / 1-GiB KV pressure / n=3",
-                        "reason": (
-                            "The policy was not invoked in every repeat and the "
-                            "paired intervals overlap."
-                        ),
-                    },
-                    {
-                        "status": "not-beneficial-in-tested-cell",
-                        "scope": "interactive batch / concurrency=8 / 1-GiB KV pressure / n=3",
-                        "reason": (
-                            "Throughput delta mean -25.31% (95% CI -26.66% to "
-                            "-23.96%); P95 latency delta mean +34.57% (95% CI "
-                            "+31.96% to +37.17%)."
-                        ),
-                    },
-                ],
-                "runtime_state_source": "live_instance_observation_only",
-                "tested_runtime_commit": (
-                    "199e0bdc6fc38fc9b14b626515efdcbf81de0b62"
-                ),
-                "evidence": "docs/evidence/sage-mate-20260905-bounded-preemption-matrix.md",
-            },
-        },
+    assert manifest["activation"]["entry_points"] == []
+    environment = dict(manifest["activation"]["environment"])
+    target = json.loads(environment.pop("BIDKV_RUNTIME_CONTRACT"))
+    assert environment == {
+        "BIDKV_UTILITY_ENABLE": "1",
+        "BIDKV_UTILITY_STRATEGY": "bidkv",
+        "BIDKV_UTILITY_LIVENESS_PREEMPTIONS": "2",
+        "BIDKV_UTILITY_CASCADE_GAIN_RATIO": "1.25",
     }
+    assert manifest["activation"]["additional_config"] == {}
+    assert target["model_type"] == "qwen3_5_moe"
+    assert target["tensor_parallel_size"] == 2
+    assert target["pipeline_parallel_size"] == 1
+    assert target["cudagraph_mode"] == "FULL_DECODE_ONLY"
+    assert target["qualification_status"] == "unqualified-development-candidate"
     pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
     assert 'bidkv = ["manifests/*.json"]' in pyproject
 
@@ -176,6 +146,13 @@ def test_dev_hub_activation_manifest_uses_typed_policy() -> None:
         "--preemption-policy",
         "bidkv.adapters.vllm_hust.selector.BidkvPreemptionPolicy",
     ]
+    bundle = json.loads(
+        (REPO_ROOT / "src/bidkv/manifests/vllm-hust-extension-v0.3.json").read_text()
+    )
+    assert manifest["activation"]["environment"]["BIDKV_RUNTIME_CONTRACT"] == (
+        bundle["activation"]["environment"]["BIDKV_RUNTIME_CONTRACT"]
+    )
+    assert "BIDKV_RUNTIME_" in manifest["activation"]["extra_env_prefixes"]
 
 
 def test_upstream_contract_gap_keeps_draft_and_release_boundaries_explicit() -> None:
