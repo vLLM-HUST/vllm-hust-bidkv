@@ -1,0 +1,26 @@
+name: Benchmark-only data (organization)
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  custody:
+    name: Benchmark-only data (organization)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: vLLM-HUST/.github
+          ref: 515ee65aa02999628aae5cc6fa1dd7d815b19512
+          persist-credentials: false
+      - name: Inspect metadata with pinned trusted policy; never execute PR code
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          EXPECTED: ${{ github.event.pull_request.changed_files }}
+        run: |
+          gh api --paginate --slurp "repos/$REPOSITORY/pulls/$PR_NUMBER/files?per_page=100" > /tmp/custody-pr-files.json
+          python scripts/benchmark_data_policy.py pr --files /tmp/custody-pr-files.json --expected "$EXPECTED"
