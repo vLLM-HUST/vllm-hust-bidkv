@@ -11,6 +11,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: vLLM-HUST/.github
-          ref: 515ee65aa02999628aae5cc6fa1dd7d815b19512
+          ref: 0cfe5109551e9b1c30ff3a75a2d93ee6ba8c9aa4
           persist-credentials: false
       - run: python -m unittest discover -s tests -p test_benchmark_data_policy.py -v
