@@ -1,0 +1,16 @@
+name: Custody policy tests
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  policy-tests:
+    name: Custody policy tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: vLLM-HUST/.github
+          ref: 0cfe5109551e9b1c30ff3a75a2d93ee6ba8c9aa4
+          persist-credentials: false
+      - run: python -m unittest discover -s tests -p test_benchmark_data_policy.py -v

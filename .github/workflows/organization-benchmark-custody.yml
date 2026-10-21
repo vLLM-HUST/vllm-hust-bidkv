@@ -1,0 +1,33 @@
+name: Benchmark-only data (organization)
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Existing PR number to inspect using trusted default-branch code
+        required: true
+        type: string
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  custody:
+    name: Benchmark-only data (organization)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: vLLM-HUST/.github
+          ref: 0cfe5109551e9b1c30ff3a75a2d93ee6ba8c9aa4
+          persist-credentials: false
+      - name: Inspect metadata with pinned trusted policy; never execute PR code
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+        run: |
+          case "$PR_NUMBER" in ''|*[!0-9]*) exit 1;; esac
+          EXPECTED=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" --jq .changed_files)
+          gh api --paginate --slurp "repos/$REPOSITORY/pulls/$PR_NUMBER/files?per_page=100" > /tmp/custody-pr-files.json
+          python scripts/benchmark_data_policy.py pr --files /tmp/custody-pr-files.json --expected "$EXPECTED"
