@@ -2,7 +2,7 @@
 
 Example:
   python scripts/summarize_qwen35_kv_pressure.py \
-    results/qwen35-evoscientist-20260929 > comparisons.csv
+    /tmp/bidkv-evidence-review/extracted-runs > /tmp/comparisons.csv
 """
 
 from __future__ import annotations

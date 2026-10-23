@@ -73,8 +73,12 @@ jobs:
       - run: ruff format --check .
       - name: All CPU source regression tests
         run: pytest -q
+      - name: Read back immutable original evidence
+        run: python scripts/fetch_qwen35_evidence.py "$RUNNER_TEMP/bidkv-originals"
       - name: Build official checked-out source artifacts
         run: python -m build
+      - name: Reject bundled experiment evidence
+        run: python scripts/check_evidence_packages.py
       - name: Independent clean wheel installation
         shell: bash
         run: |
