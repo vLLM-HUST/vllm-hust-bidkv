@@ -12,6 +12,9 @@
 
 ## 概述
 
+历史 Qwen3.5 输入、运行结果与失败记录见[benchmark 证据入口](docs/qwen35-benchmark-source.md)。
+下载器核验固定提交和逐文件摘要；新的实验数据应归档到 benchmark。
+
 `bidkv` 是一个**零外部依赖**的独立 Python 包，解决 KV cache 压力下的**受害者选择**问题：当 KV 空间不足时，应该 preempt 哪个请求？
 
 核心思路：驱逐"每单位质量损失能释放最多 KV 空间"的请求，即最大化 utility：

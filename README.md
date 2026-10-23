@@ -101,6 +101,10 @@ print(registry2.list_strategies())  # ["bidkv", "preempt-evict"]
 
 ## Running Experiments
 
+Historical Qwen3.5 inputs and run archives are in the
+[benchmark evidence guide](docs/qwen35-benchmark-source.md), with a checksum-verified
+external downloader. Preserve failures and publish new measured evidence to benchmark.
+
 ```bash
 # vLLM: 5 strategies × mixed workload × 3 rates × 3 runs
 HF_HUB_OFFLINE=1 python -m bidkv.experiments.vllm.runner \

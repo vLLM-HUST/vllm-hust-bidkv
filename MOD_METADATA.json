@@ -3,7 +3,7 @@
   "display_name": "BidKV",
   "evidence": {
     "index": "https://github.com/vLLM-HUST/vllm-hust-bidkv/blob/main/docs/evidence/sage-mate-20260905-bounded-preemption-matrix.md",
-    "latest_result": "https://github.com/vLLM-HUST/vllm-hust-bidkv/blob/main/results/qwen35-evoscientist-20260929/README.md#high-concurrency-kv-pressure-result",
+    "latest_result": "https://github.com/vLLM-HUST/vllm-hust-benchmark/blob/71c2d4ad5f34536d73f66c577e1017da59dba085/archive/mod-git-20261022/website-source-vllm-hust-bidkv/snapshot/results/qwen35-evoscientist-20260929/README.md#high-concurrency-kv-pressure-result",
     "performance_claims": [
       {
         "label": "matched-real-online-tested-cell",
