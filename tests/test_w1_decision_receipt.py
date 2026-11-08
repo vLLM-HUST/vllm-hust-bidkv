@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from bidkv.evidence.w1_decision_receipt import EvidenceError, build_receipt, load_trace
+from bidkv.custody.w1_decision_receipt import EvidenceError, build_receipt, load_trace
 
 
 def _candidate(request_id: str, tokens: int, cost: float) -> dict:

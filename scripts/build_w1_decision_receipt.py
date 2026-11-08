@@ -9,7 +9,7 @@ import os
 import sys
 from pathlib import Path
 
-from bidkv.evidence.w1_decision_receipt import EvidenceError, build_receipt, load_trace
+from bidkv.custody.w1_decision_receipt import EvidenceError, build_receipt, load_trace
 
 
 def main() -> int:
