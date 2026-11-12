@@ -26,8 +26,13 @@
   "mod_id": "bidkv",
   "repository": "vllm-hust-bidkv",
   "responsibility": {
-    "advisor_status": "not_declared",
-    "advisors": [],
+    "advisor_status": "declared",
+    "advisors": [
+      {
+        "name": "Shuhao Zhang / 张书豪",
+        "relationship": "internal"
+      }
+    ],
     "maintainers": [
       {
         "github": "MingqiWang-coder",
