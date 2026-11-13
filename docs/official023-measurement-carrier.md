@@ -74,3 +74,44 @@ not qualify model execution. Before dataset measurements, separately require the
 dependency admission, real two-card graph-mode and continuous C8 qualification, complete input
 admission and preserved cleanup/raw records. No new device-performance or five-dataset completion
 claim is made by this source addition.
+
+## Optional single-chip Ascend topology compatibility copy
+
+The official Ascend0.23 CPU-binding option defaults to `True`. Do not disable this shared
+optimization to favor a MOD. In the observed two-card containers, `npu-smi info -m` maps physical
+6/7 or 3/4 to logical0/1, while `npu-smi info -t topo` labels physical IDs. The pinned upstream
+parser stores physical keys but its allocator looks up logical keys, incorrectly reporting a
+cpuset/NUMA conflict despite valid available CPUs.
+
+Prepare a separate package copy when this exact single-chip mapping problem is established:
+
+```bash
+python scripts/prepare_ascend023_cpu_binding_host.py \
+  --source /vllm-workspace/vllm-ascend \
+  --out /workspace/new-measurement/runtime/ascend023-cpubind
+```
+
+This command requires Ascend commit `5cb98caaadeff42b5b62b996e34bb2aaa29d20fd` and CPU-binding
+source SHA-256 `71719e397ab003b31ba5e46e1a6da4da658ae7221eeead04311b65ad4d12d533`. It copies the
+tracked package and matching prebuilt libraries, preserves upstream files, and changes only the
+topology parser's physical-to-logical lookup. Unallocated topology rows never fall back to an
+identity guess. Ambiguous multi-chip and conflicting mappings reject safely; this is not a general
+multi-chip compatibility claim. CPU allocation, thread binding, memory migration and IRQ code remain
+unchanged. It issues no manual binding or host-service commands.
+
+Place both prepared package roots on `PYTHONPATH` for **both** arms and keep CPU binding `True`.
+Identify this common base adaptation separately from BidKV policy activation, preserve actual
+imports and all source/library hashes, and retain any warning/skip plus worker/thread affinity. IRQ
+or migration permissions can still limit native behavior; the compatibility copy does not claim
+those operations succeeded. New configuration qualification must use the actual shared copy.
+
+Seven CPU tests cover identity, physical6/7 and3/4 allocations, unknown/unallocated rows,
+ambiguous/conflicting mappings, source drift and unchanged binding/IRQ/migration algorithms:
+
+```bash
+python -m pytest tests/test_ascend023_cpu_binding_host.py -q
+```
+
+The compressed CPU-binding fixture is the byte-preserved Apache-2.0 upstream source at that commit.
+These checks establish source/parser behavior, not NPU performance or a completed dataset campaign.
+Public numeric reports and controlled-original indexes belong in the benchmark archive.
