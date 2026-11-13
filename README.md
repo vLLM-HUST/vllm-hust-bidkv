@@ -143,6 +143,10 @@ HF_HUB_OFFLINE=1 python -m bidkv.experiments.sglang.runner \
 
 ## Framework Integration (vLLM)
 
+An isolated [official-vLLM 0.23 measurement carrier](docs/official023-measurement-carrier.md)
+is available as an experimental source adaptation. Its source, dependency,
+tokenization and device gates are separate from the maintained integration below.
+
 The Sage Mate target at vLLM-HUST `762f85b3` (`0.28.1rc1.dev319`) exposes the
 immutable `vllm.preemption-policy.v1` contract. BidKV supplies
 `BidkvPreemptionPolicy`; vLLM retains ownership of request state, preemption,
