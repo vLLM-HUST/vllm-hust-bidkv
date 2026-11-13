@@ -3,7 +3,9 @@
 
 import ast
 import gzip
+import hashlib
 import importlib.util
+import os
 import re
 from pathlib import Path
 from types import SimpleNamespace
@@ -96,3 +98,50 @@ def test_source_guard_and_no_changes_to_binding_irq_or_migration_algorithms():
     before, after = functions(original), functions(patched)
     assert before.keys() == after.keys()
     assert [name for name in before if before[name] != after[name]] == ["parse_topo_affinity"]
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Actual carrier symlinks are tested on Linux")
+def test_installed_operator_resources_build_info_and_relative_links_preserved(tmp_path):
+    source, out = tmp_path / "source", tmp_path / "copy"
+    package = source / "vllm_ascend"
+    operator = package / "_cann_ops_custom/vendors/custom_transformer"
+    binary = operator / "op_impl/ai_core/tbe/kernel/config/ascend910b/binary_info_config.json"
+    binary.parent.mkdir(parents=True)
+    binary.write_bytes(b'{"operator":"AddRmsNormBias"}\n')
+    (package / "_build_info.py").write_bytes(b"COMMIT = 'installed'\n")
+    library = operator / "op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64/libcust.so"
+    library.parent.mkdir(parents=True)
+    library.write_bytes(b"installed-prebuilt-library\0")
+    alias = library.parents[3] / "liboptiling.so"
+    alias.symlink_to("lib/linux/aarch64/libcust.so")
+    cache = package / "__pycache__/ignored.pyc"
+    cache.parent.mkdir()
+    cache.write_bytes(b"not a runtime asset")
+    paths = PREPARE.installed_package_paths(source)
+    files = PREPARE.copy_package(source, out, paths)
+    assert len(files) == 4
+    assert (out / alias.relative_to(source)).is_symlink()
+    assert (out / alias.relative_to(source)).readlink().as_posix() == "lib/linux/aarch64/libcust.so"
+    for record in files:
+        original, copied = source / record["path"], out / record["path"]
+        assert copied.read_bytes() == original.read_bytes()
+        assert record["source_sha256"] == hashlib.sha256(original.read_bytes()).hexdigest()
+    assert not (out / cache.relative_to(source)).exists()
+    assert binary.read_bytes() == b'{"operator":"AddRmsNormBias"}\n'
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Actual carrier symlinks are tested on Linux")
+def test_external_or_directory_symlink_is_rejected_before_copy(tmp_path):
+    source = tmp_path / "source"
+    package = source / "vllm_ascend"
+    package.mkdir(parents=True)
+    outside = tmp_path / "outside"
+    outside.write_bytes(b"external")
+    alias = package / "escape"
+    alias.symlink_to(outside)
+    with pytest.raises(ValueError, match="regular internal"):
+        PREPARE.installed_package_paths(source)
+    alias.unlink()
+    alias.symlink_to(package, target_is_directory=True)
+    with pytest.raises(ValueError, match="regular internal"):
+        PREPARE.installed_package_paths(source)

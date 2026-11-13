@@ -93,7 +93,12 @@ python scripts/prepare_ascend023_cpu_binding_host.py \
 
 This command requires Ascend commit `5cb98caaadeff42b5b62b996e34bb2aaa29d20fd` and CPU-binding
 source SHA-256 `71719e397ab003b31ba5e46e1a6da4da658ae7221eeead04311b65ad4d12d533`. It copies the
-tracked package and matching prebuilt libraries, preserves upstream files, and changes only the
+installed package, including matching prebuilt libraries, `_build_info.py`, and the complete
+`_cann_ops_custom` metadata/kernel assets. Copying only tracked files and libraries is insufficient:
+the runtime locates `binary_info_config.json` and operator binaries relative to its package.
+Internal relative library symlinks are preserved and inventoried; external/directory symlinks are
+rejected. Byte hashes cover every copied file, with only Python cache artifacts excluded.
+The helper preserves upstream files and changes only the
 topology parser's physical-to-logical lookup. Unallocated topology rows never fall back to an
 identity guess. Ambiguous multi-chip and conflicting mappings reject safely; this is not a general
 multi-chip compatibility claim. CPU allocation, thread binding, memory migration and IRQ code remain
@@ -105,8 +110,9 @@ imports and all source/library hashes, and retain any warning/skip plus worker/t
 or migration permissions can still limit native behavior; the compatibility copy does not claim
 those operations succeeded. New configuration qualification must use the actual shared copy.
 
-Seven CPU tests cover identity, physical6/7 and3/4 allocations, unknown/unallocated rows,
-ambiguous/conflicting mappings, source drift and unchanged binding/IRQ/migration algorithms:
+Nine CPU tests cover identity, physical6/7 and3/4 allocations, unknown/unallocated rows,
+ambiguous/conflicting mappings, source drift, unchanged binding/IRQ/migration algorithms, and
+installed metadata/binary/link preservation. The two actual-symlink checks run on Linux:
 
 ```bash
 python -m pytest tests/test_ascend023_cpu_binding_host.py -q

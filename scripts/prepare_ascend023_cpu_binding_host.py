@@ -9,6 +9,7 @@ does not change CPU allocation, thread binding, memory migration or IRQ logic.
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -49,6 +50,52 @@ def patched_source(raw):
     return result
 
 
+def installed_package_paths(source):
+    """Include installed operator metadata/binaries as well as tracked source."""
+    package = source / "vllm_ascend"
+    paths = []
+    for path in package.rglob("*"):
+        if "__pycache__" in path.parts or path.suffix in {".pyc", ".pyo"}:
+            continue
+        if path.is_symlink():
+            target = path.resolve(strict=True)
+            if not target.is_relative_to(package.resolve()) or not target.is_file():
+                raise ValueError("Installed package link must target a regular internal file")
+        elif path.is_dir():
+            continue
+        elif not path.is_file():
+            raise ValueError("Installed package contains an unsupported special file")
+        paths.append(path.relative_to(source).as_posix())
+    return sorted(paths)
+
+
+def copy_package(source, out, paths):
+    files = []
+    for name in paths:
+        path, target = source / name, out / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        record = {"path": name}
+        if path.is_symlink():
+            link = os.readlink(path)
+            # Preserve the installed relative link without referring to upstream.
+            if Path(link).is_absolute():
+                link = os.path.relpath(path.resolve(), path.parent)
+            target.symlink_to(link)
+            record["source_symlink_target"] = os.readlink(path)
+            record["prepared_symlink_target"] = link
+        else:
+            shutil.copy2(path, target)
+        data = path.read_bytes()
+        record.update(bytes=len(data), source_sha256=hashlib.sha256(data).hexdigest())
+        files.append(record)
+    # Verify after all symlink targets have been copied, independently of order.
+    for record in files:
+        copied = (out / record["path"]).read_bytes()
+        if hashlib.sha256(copied).hexdigest() != record["source_sha256"]:
+            raise ValueError("Copied installed package changed during preparation")
+    return files
+
+
 def prepare(source, out):
     source, out = source.resolve(), out.resolve()
     if out.exists() or out.is_relative_to(source) or source.is_relative_to(out):
@@ -68,33 +115,12 @@ def prepare(source, out):
     out.parent.mkdir(parents=True, exist_ok=True)
     if shutil.disk_usage(out.parent).free < 4 * 1024**3:
         raise ValueError("Less than4GiB startup space on the output volume")
-    tracked = (
-        subprocess.check_output(["git", "-C", str(source), "ls-files", "-z", "--", "vllm_ascend"])
-        .decode()
-        .split("\0")
-    )
-    paths = {name for name in tracked if name}
-    paths.update(
-        path.relative_to(source).as_posix() for path in (source / "vllm_ascend").rglob("*.so")
-    )
-    if (source / "vllm_ascend/_version.py").is_file():
-        paths.add("vllm_ascend/_version.py")
+    paths = installed_package_paths(source)
     out.mkdir(exist_ok=False)
-    files = []
-    for name in sorted(paths):
-        path = source / name
-        if not path.is_file():
-            continue
-        target = out / name
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(path, target)
-        data = target.read_bytes()
-        files.append(
-            {"path": name, "bytes": len(data), "source_sha256": hashlib.sha256(data).hexdigest()}
-        )
+    files = copy_package(source, out, paths)
     (out / FILE).write_bytes(patched)
     receipt = {
-        "profile": "official-ascend0.23-single-chip-topology-compat/v1",
+        "profile": "official-ascend0.23-single-chip-topology-compat/v2",
         "base_repository": "https://github.com/vllm-project/vllm-ascend",
         "base_commit": head,
         "source": str(source),
@@ -103,6 +129,8 @@ def prepare(source, out):
         "cpu_binding_prepared_sha256": hashlib.sha256(patched).hexdigest(),
         "prepare_script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "source_files": files,
+        "installed_runtime_resources_preserved": True,
+        "excluded_cache_artifacts": ["__pycache__", "*.pyc", "*.pyo"],
         "upstream_source_modified": False,
         "model_generation_requests": 0,
         "scope": (
